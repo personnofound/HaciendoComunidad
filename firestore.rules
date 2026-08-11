@@ -1,0 +1,112 @@
+rules_version = '2';
+
+function tieneAppCheck() {
+  return request.app != null;
+}
+
+function esTextoValido(valor, maxLargo) {
+  return valor is string && valor.size() <= maxLargo;
+}
+
+function esTextoOpcionalValido(valor, maxLargo) {
+  return valor == null || (valor is string && valor.size() <= maxLargo);
+}
+
+function timestampEsDelServidor() {
+  return request.resource.data.timestamp == request.time;
+}
+
+function soloCambioDeCampo(campo) {
+  return request.resource.data.diff(resource.data).affectedKeys().hasOnly([campo]);
+}
+
+function esAvanceDeEstado(estadoActual, estadoNuevo) {
+  return soloCambioDeCampo('estado') &&
+    resource.data.estado == estadoActual &&
+    request.resource.data.estado == estadoNuevo;
+}
+
+function esVotoDesactualizado() {
+  return soloCambioDeCampo('marcasDesactualizado') &&
+    request.resource.data.marcasDesactualizado == resource.data.marcasDesactualizado + 1;
+}
+
+function esAdmin() {
+  return request.auth != null &&
+    request.auth.uid in [
+     'fBcubXcOZBMIJxCDUAeV0aPwJv33'
+    ];
+}
+
+match /databases/{database}/documents {
+
+  match /reportes_ayuda/{docId} {
+    allow read: if true;
+
+    allow create: if tieneAppCheck() &&
+      timestampEsDelServidor() &&
+      esTextoValido(request.resource.data.tipo, 30) &&
+      esTextoOpcionalValido(request.resource.data.descripcion, 300) &&
+      esTextoOpcionalValido(request.resource.data.localidad, 100) &&
+      esTextoOpcionalValido(request.resource.data.contacto, 120) &&
+      request.resource.data.estado == 'activo' &&
+      request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90 &&
+      request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180 &&
+      request.resource.data.reportesAbuso == 0 &&
+      request.resource.data.marcasDesactualizado == 0;
+
+    allow update: if esAdmin() || (tieneAppCheck() && (
+      esAvanceDeEstado('activo', 'atendido') || esVotoDesactualizado()
+    ));
+
+    allow delete: if esAdmin();
+  }
+
+  match /desaparecidos/{docId} {
+    allow read: if true;
+
+    allow create: if tieneAppCheck() &&
+      timestampEsDelServidor() &&
+      request.resource.data.tipoSujeto in ['persona', 'mascota'] &&
+      esTextoOpcionalValido(request.resource.data.nombre, 100) &&
+      esTextoValido(request.resource.data.descripcion, 400) &&
+      esTextoOpcionalValido(request.resource.data.localidad, 100) &&
+      esTextoOpcionalValido(request.resource.data.ultimaUbicacion, 150) &&
+      esTextoValido(request.resource.data.contacto, 120) &&
+      request.resource.data.estado == 'buscando' &&
+      request.resource.data.reportesAbuso == 0 &&
+      request.resource.data.marcasDesactualizado == 0;
+
+    allow update: if esAdmin() || (tieneAppCheck() && (
+      esAvanceDeEstado('buscando', 'encontrado') || esVotoDesactualizado()
+    ));
+
+    allow delete: if esAdmin();
+  }
+
+  match /comunidad_servicios/{docId} {
+    allow read: if true;
+
+    allow create: if tieneAppCheck() &&
+      timestampEsDelServidor() &&
+      request.resource.data.tipoPublicacion in ['peticion', 'oferta'] &&
+      esTextoValido(request.resource.data.categoria, 40) &&
+      esTextoValido(request.resource.data.servicio, 100) &&
+      esTextoOpcionalValido(request.resource.data.descripcion, 300) &&
+      esTextoOpcionalValido(request.resource.data.zona, 120) &&
+      esTextoValido(request.resource.data.contacto, 120) &&
+      request.resource.data.estado == 'abierto' &&
+      request.resource.data.reportesAbuso == 0 &&
+      request.resource.data.marcasDesactualizado == 0;
+
+    allow update: if esAdmin() || (tieneAppCheck() && (
+      esAvanceDeEstado('abierto', 'cubierto') || esVotoDesactualizado()
+    ));
+
+    allow delete: if esAdmin();
+  }
+
+  match /{document=**} {
+    allow read, write: if false;
+  }
+}

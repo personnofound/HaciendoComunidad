@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Haciendo Comunidad — mapa de ayuda en tiempo real</title>
+<meta name="description" content="Pide ayuda, reporta desaparecidos y ofrece o pide servicios durante la emergencia. Sin registro, en tiempo real.">
+
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#c0392b">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Haciendo Comunidad">
+<link rel="icon" href="./icons/icon-192.png">
+
+<!-- Leaflet (mapa) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+<link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <span class="dot" aria-hidden="true"></span>
+    <h1>Haciendo Comunidad<small>Ayuda por terremoto · sin registro · tiempo real</small></h1>
+  </div>
+  <span id="estado-conexion">Conectando…</span>
+</header>
+
+<nav class="tabs" aria-label="Secciones">
+  <button class="active" data-vista="vista-mapa">🆘 Mapa de ayuda</button>
+  <button data-vista="vista-desaparecidos">🔎 Desaparecidos</button>
+  <button data-vista="vista-comunidad">🤝 Comunidad</button>
+</nav>
+
+<main>
+
+  <!-- ===================== MAPA DE AYUDA ===================== -->
+  <section id="vista-mapa" class="vista active">
+    <h2 class="titulo-vista">Mapa de ayuda</h2>
+    <p class="subtitulo-vista">Toca cualquier punto del mapa donde alguien necesita ayuda para reportarlo. Se publica de inmediato para todos.</p>
+
+    <div id="mapa" role="application" aria-label="Mapa para reportar dónde se necesita ayuda"></div>
+
+    <div class="leyenda-mapa" id="leyenda-mapa"></div>
+
+    <button type="button" class="btn btn-secundario" id="btn-abrir-reporte-manual" style="width:100%; margin-bottom:10px">
+      📍 Reportar sin usar el mapa
+    </button>
+
+    <div class="lista-cabecera">
+      <h3>Reportes recientes</h3>
+    </div>
+    <div class="filtro-localidad">
+      <span class="icono">🏘️</span>
+      <input type="text" id="filtro-localidad-reportes" placeholder="Filtrar por localidad o barrio…" aria-label="Filtrar reportes por localidad">
+      <button type="button" class="limpiar" id="limpiar-filtro-reportes" hidden aria-label="Quitar filtro">✕</button>
+    </div>
+    <label class="toggle-mostrar-todo">
+      <input type="checkbox" id="toggle-atendidos-reportes">
+      Mostrar también los ya atendidos o marcados como desactualizados
+    </label>
+    <div id="aviso-cache-reportes" class="aviso-cache" hidden>Mostrando la última copia guardada en este dispositivo. Actualizando…</div>
+    <div id="lista-reportes"></div>
+    <p id="vacio-reportes" class="vacio" hidden>Todavía no hay reportes. Sé la primera persona en marcar dónde se necesita ayuda.</p>
+    <button type="button" class="btn btn-secundario" id="btn-cargar-mas-reportes">Cargar más</button>
+  </section>
+
+  <!-- ===================== DESAPARECIDOS ===================== -->
+  <section id="vista-desaparecidos" class="vista">
+    <h2 class="titulo-vista">Personas y mascotas desaparecidas</h2>
+    <p class="subtitulo-vista">Publica una ficha para que la comunidad ayude a buscar. Deja siempre un contacto.</p>
+
+    <form id="form-desaparecidos" class="form-card">
+      <div class="fila">
+        <label>¿A quién buscas?</label>
+        <div class="chips" id="chips-tipo-sujeto">
+          <button type="button" class="chip" data-tipo-sujeto="persona" aria-pressed="true">🧍 Persona</button>
+          <button type="button" class="chip" data-tipo-sujeto="mascota" aria-pressed="false">🐾 Mascota</button>
+        </div>
+      </div>
+      <div class="fila">
+        <label for="nombre-desaparecido">Nombre</label>
+        <input type="text" id="nombre-desaparecido" maxlength="100" placeholder="Nombre de la persona o mascota">
+      </div>
+      <div class="fila">
+        <label for="descripcion-desaparecido">Descripción (obligatorio)</label>
+        <textarea id="descripcion-desaparecido" maxlength="400" required
+          placeholder="Edad aproximada, ropa, señas particulares, raza y color si es mascota, etc."></textarea>
+      </div>
+      <div class="fila">
+        <label for="localidad-desaparecido">Localidad / barrio</label>
+        <input type="text" id="localidad-desaparecido" maxlength="100" placeholder="Ej: San Fernando, Comuna 17…">
+      </div>
+      <div class="fila">
+        <label for="ubicacion-desaparecido">Última ubicación conocida (detalle)</label>
+        <input type="text" id="ubicacion-desaparecido" maxlength="150" placeholder="Calle, punto de referencia, dirección aproximada">
+      </div>
+      <div class="fila">
+        <label for="contacto-desaparecido">Tu contacto (obligatorio)</label>
+        <input type="tel" id="contacto-desaparecido" maxlength="120" required placeholder="WhatsApp o teléfono">
+        <p class="ayuda-campo">Solo se muestra este número, nunca datos privados adicionales.</p>
+      </div>
+      <button type="submit" class="btn btn-primario">Publicar</button>
+      <p class="msg-form" id="msg-form-desaparecidos"></p>
+    </form>
+
+    <div class="lista-cabecera">
+      <h3>Publicados recientemente</h3>
+    </div>
+    <div class="filtro-inline" id="filtro-desaparecidos">
+      <button class="active" data-filtro="todos">Todos</button>
+      <button data-filtro="persona">🧍 Personas</button>
+      <button data-filtro="mascota">🐾 Mascotas</button>
+    </div>
+    <div class="filtro-localidad">
+      <span class="icono">🏘️</span>
+      <input type="text" id="filtro-localidad-desaparecidos" placeholder="Filtrar por localidad o barrio…" aria-label="Filtrar por localidad">
+      <button type="button" class="limpiar" id="limpiar-filtro-desaparecidos" hidden aria-label="Quitar filtro">✕</button>
+    </div>
+    <label class="toggle-mostrar-todo">
+      <input type="checkbox" id="toggle-encontrados-desaparecidos">
+      Mostrar también los ya encontrados o marcados como desactualizados
+    </label>
+    <div id="aviso-cache-desaparecidos" class="aviso-cache" hidden>Mostrando la última copia guardada en este dispositivo. Actualizando…</div>
+    <div id="lista-desaparecidos"></div>
+    <p id="vacio-desaparecidos" class="vacio" hidden>Aún no hay publicaciones en esta categoría.</p>
+    <button type="button" class="btn btn-secundario" id="btn-cargar-mas-desaparecidos">Cargar más</button>
+  </section>
+
+  <!-- ===================== COMUNIDAD ===================== -->
+  <section id="vista-comunidad" class="vista">
+    <h2 class="titulo-vista">Comunidad</h2>
+    <p class="subtitulo-vista">Pide algo que necesites o publica algo que puedas ofrecer: agua, transporte, alojamiento, atención médica, herramientas, comida...</p>
+
+    <form id="form-comunidad" class="form-card">
+      <div class="fila">
+        <label>¿Qué es esta publicación?</label>
+        <div class="chips" id="chips-tipo-publicacion">
+          <button type="button" class="chip" data-tipo-publicacion="peticion" aria-pressed="true">🙋 Necesito</button>
+          <button type="button" class="chip" data-tipo-publicacion="oferta" aria-pressed="false">🤝 Puedo ofrecer</button>
+        </div>
+      </div>
+      <div class="fila">
+        <label for="servicio-comunidad">¿Qué necesitas u ofreces? (obligatorio)</label>
+        <input type="text" id="servicio-comunidad" maxlength="100" required placeholder="Ej: Transporte, agua potable, alojamiento temporal…">
+      </div>
+      <div class="fila">
+        <label>Categoría</label>
+        <div class="chips" id="chips-categoria-comunidad"></div>
+      </div>
+      <div class="fila">
+        <label for="descripcion-comunidad">Detalles</label>
+        <textarea id="descripcion-comunidad" maxlength="300" placeholder="Cantidad, horarios, condiciones, cuántas personas necesitan esto, etc."></textarea>
+      </div>
+      <div class="fila">
+        <label for="zona-comunidad">Zona / barrio</label>
+        <input type="text" id="zona-comunidad" maxlength="120" placeholder="Ej: San Fernando, Comuna 17…">
+      </div>
+      <div class="fila">
+        <label for="contacto-comunidad">Tu contacto (obligatorio)</label>
+        <input type="tel" id="contacto-comunidad" maxlength="120" required placeholder="WhatsApp o teléfono">
+      </div>
+      <button type="submit" class="btn btn-primario">Publicar</button>
+      <p class="msg-form" id="msg-form-comunidad"></p>
+    </form>
+
+    <div class="lista-cabecera">
+      <h3>Publicaciones recientes</h3>
+    </div>
+    <div class="filtro-inline" id="filtro-tipo-comunidad">
+      <button class="active" data-filtro="todos">Todas</button>
+      <button data-filtro="peticion">🙋 Necesitan</button>
+      <button data-filtro="oferta">🤝 Ofrecen</button>
+    </div>
+    <div class="fila" style="margin-bottom:10px">
+      <select id="filtro-categoria-comunidad" aria-label="Filtrar por categoría">
+        <option value="todas">Todas las categorías</option>
+      </select>
+    </div>
+    <label class="toggle-mostrar-todo">
+      <input type="checkbox" id="toggle-cubiertos-comunidad">
+      Mostrar también las cubiertas/completas o marcadas como desactualizadas
+    </label>
+    <div id="aviso-cache-comunidad" class="aviso-cache" hidden>Mostrando la última copia guardada en este dispositivo. Actualizando…</div>
+    <div id="lista-comunidad"></div>
+    <p id="vacio-comunidad" class="vacio" hidden>Todavía no hay publicaciones. ¡Sé la primera persona en pedir u ofrecer ayuda!</p>
+    <button type="button" class="btn btn-secundario" id="btn-cargar-mas-comunidad">Cargar más</button>
+  </section>
+
+</main>
+
+<footer class="pie">
+  Proyecto comunitario y gratuito. No sustituye a los servicios oficiales de emergencia: si hay riesgo de vida, contacta primero a las líneas de emergencia de tu país.
+</footer>
+
+<!-- ===================== Modal: nuevo reporte en el mapa ===================== -->
+<div class="modal-fondo" id="modal-reporte" hidden>
+  <div class="modal-caja">
+    <div class="lista-cabecera" style="margin-top:0">
+      <h3 style="text-transform:none; font-size:16px; color:var(--text)">Nuevo reporte de ayuda</h3>
+      <button type="button" class="btn btn-secundario" id="btn-cerrar-modal-reporte" style="padding:6px 12px">✕</button>
+    </div>
+    <p class="tip-mapa" id="coords-reporte">Toca el mapa para marcar la ubicación</p>
+    <button type="button" class="btn btn-secundario" id="btn-usar-mi-ubicacion" style="width:100%; margin-bottom:12px">
+      📡 Usar mi ubicación (GPS)
+    </button>
+
+    <form id="form-reporte" class="form-card" style="margin-bottom:0; border:none; padding:0">
+      <div class="fila">
+        <label>Tipo de ayuda</label>
+        <div class="chips" id="chips-tipo-ayuda"></div>
+      </div>
+      <div class="fila">
+        <label for="descripcion-reporte">Descripción</label>
+        <textarea id="descripcion-reporte" maxlength="300" placeholder="¿Qué está pasando? ¿Cuántas personas? ¿Urgencia?"></textarea>
+      </div>
+      <div class="fila">
+        <label for="localidad-reporte">Localidad / barrio</label>
+        <input type="text" id="localidad-reporte" maxlength="100" placeholder="Ej: San Fernando, Comuna 17…">
+      </div>
+      <div class="fila">
+        <label for="contacto-reporte">Contacto (opcional)</label>
+        <input type="tel" id="contacto-reporte" maxlength="120" placeholder="WhatsApp o teléfono, si puedes recibir llamadas">
+      </div>
+      <button type="submit" class="btn btn-primario">Enviar reporte</button>
+      <p class="msg-form" id="msg-form-reporte"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== Franja instalar PWA ===================== -->
+<div class="franja-instalar" id="franja-instalar" hidden>
+  <p id="texto-instalar">Instala esta app en tu teléfono para acceder más rápido, incluso con mala señal.</p>
+  <div class="botones">
+    <button type="button" class="btn btn-primario" id="btn-instalar" style="padding:8px 14px">Instalar</button>
+    <button type="button" class="cerrar" id="btn-cerrar-instalar" aria-label="Cerrar">✕</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script>
+  // Pinta la leyenda y los chips de tipo de ayuda a partir de la lista en mapa.js
+  // (se hace aquí de forma simple para no depender de más módulos)
+</script>
+<script type="module">
+  import { TIPOS_AYUDA } from './js/mapa.js';
+  const leyenda = document.getElementById('leyenda-mapa');
+  leyenda.innerHTML = TIPOS_AYUDA.map(t => `<span><i style="background:${t.color}"></i>${t.etiqueta}</span>`).join('');
+  const chips = document.getElementById('chips-tipo-ayuda');
+  chips.innerHTML = TIPOS_AYUDA.map(t => `<button type="button" class="chip" data-tipo="${t.id}" aria-pressed="false">${t.etiqueta}</button>`).join('');
+</script>
+<script type="module" src="./js/app.js"></script>
+
+</body>
+</html>
