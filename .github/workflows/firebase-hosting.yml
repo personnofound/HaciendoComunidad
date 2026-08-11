@@ -26,3 +26,10 @@ jobs:
           args: deploy --only firestore:rules
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+
+      - name: Desplegar reglas de Storage
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only storage
+        env:
+          GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'

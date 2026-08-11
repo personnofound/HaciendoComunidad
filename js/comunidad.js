@@ -3,13 +3,15 @@ import { crearControladorDatos } from './datos.js';
 import { COLECCIONES, CATEGORIAS_COMUNIDAD, UMBRAL_DESACTUALIZADO } from './config.js';
 import {
   escaparHTML, limpiarTexto, puedeEnviar, marcarEnviado, tiempoRelativo, linkContacto,
-  esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada
+  esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada,
+  obtenerUbicacionPorGPS
 } from './utils.js';
 
 const controlador = crearControladorDatos(COLECCIONES.comunidad);
 let itemsActuales = [];
 let filtroTipoPublicacion = 'todos'; // todos | peticion | oferta
 let filtroCategoria = 'todas';
+let filtroZona = '';
 let mostrarCubiertos = false;
 const COLECCION_ID = COLECCIONES.comunidad;
 
@@ -62,9 +64,10 @@ function itemsFiltrados(items) {
   return items.filter((it) => {
     const pasaTipo = filtroTipoPublicacion === 'todos' || it.tipoPublicacion === filtroTipoPublicacion;
     const pasaCategoria = filtroCategoria === 'todas' || it.categoria === filtroCategoria;
+    const pasaZona = !filtroZona || String(it.zona || '').toLowerCase().includes(filtroZona);
     const desactualizada = (it.marcasDesactualizado || 0) >= UMBRAL_DESACTUALIZADO;
     const pasaEstado = mostrarCubiertos || (it.estado !== 'cubierto' && !desactualizada);
-    return pasaTipo && pasaCategoria && pasaEstado;
+    return pasaTipo && pasaCategoria && pasaZona && pasaEstado;
   });
 }
 
@@ -138,6 +141,41 @@ export function iniciarListaYRealtimeComunidad() {
   selectCategoria.addEventListener('change', () => {
     filtroCategoria = selectCategoria.value;
     renderLista(itemsActuales);
+  });
+
+  const inputZona = document.getElementById('filtro-zona-comunidad');
+  const btnLimpiarZona = document.getElementById('limpiar-filtro-zona-comunidad');
+  inputZona.addEventListener('input', () => {
+    filtroZona = inputZona.value.trim().toLowerCase();
+    btnLimpiarZona.hidden = !filtroZona;
+    renderLista(itemsActuales);
+  });
+  btnLimpiarZona.addEventListener('click', () => {
+    inputZona.value = '';
+    filtroZona = '';
+    btnLimpiarZona.hidden = true;
+    renderLista(itemsActuales);
+  });
+
+  const btnGPS = document.getElementById('gps-filtro-comunidad');
+  btnGPS.addEventListener('click', async () => {
+    btnGPS.disabled = true;
+    const textoOriginal = btnGPS.textContent;
+    btnGPS.textContent = '📡 Ubicando…';
+    try {
+      const ubicacion = await obtenerUbicacionPorGPS();
+      const texto = ubicacion.barrio || ubicacion.ciudad || '';
+      inputZona.value = texto;
+      filtroZona = texto.toLowerCase();
+      btnLimpiarZona.hidden = !filtroZona;
+      renderLista(itemsActuales);
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo obtener tu ubicación. Revisa los permisos del navegador.');
+    } finally {
+      btnGPS.disabled = false;
+      btnGPS.textContent = textoOriginal;
+    }
   });
 
   document.getElementById('toggle-cubiertos-comunidad').addEventListener('change', (e) => {

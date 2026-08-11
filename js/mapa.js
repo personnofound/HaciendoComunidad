@@ -1,21 +1,16 @@
 // js/mapa.js
 import { crearControladorDatos } from './datos.js';
-import { COLECCIONES, UBICACION_POR_DEFECTO, UMBRAL_DESACTUALIZADO } from './config.js';
+import { COLECCIONES, UBICACION_POR_DEFECTO, UMBRAL_DESACTUALIZADO, TIPOS_AYUDA } from './config.js';
 import {
   escaparHTML, limpiarTexto, puedeEnviar, marcarEnviado, tiempoRelativo, linkContacto,
-  esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada
+  esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada,
+  obtenerUbicacionPorGPS
 } from './utils.js';
 
-export const TIPOS_AYUDA = [
-  { id: 'medica', etiqueta: 'Médica', color: '#c0392b' },
-  { id: 'rescate', etiqueta: 'Atrapados / Rescate', color: '#e05a45' },
-  { id: 'agua', etiqueta: 'Agua', color: '#3b82c4' },
-  { id: 'alimentos', etiqueta: 'Alimentos', color: '#d9a441' },
-  { id: 'refugio', etiqueta: 'Refugio / Techo', color: '#8e6fce' },
-  { id: 'otro', etiqueta: 'Otro', color: '#7a8a99' }
-];
+export { TIPOS_AYUDA };
 
 const controlador = crearControladorDatos(COLECCIONES.reportes);
+const COLECCION_ID = COLECCIONES.reportes;
 
 let mapaLeaflet = null;
 let capaMarcadores = null;
@@ -23,8 +18,8 @@ let ubicacionSeleccionada = null; // {lat, lng}
 let tipoSeleccionado = null;
 let itemsActuales = [];
 let filtroLocalidad = '';
+let filtroTipo = 'todos';
 let mostrarAtendidos = false;
-const COLECCION_ID = COLECCIONES.reportes;
 
 function colorPorTipo(id) {
   return (TIPOS_AYUDA.find((t) => t.id === id) || TIPOS_AYUDA[TIPOS_AYUDA.length - 1]).color;
@@ -55,8 +50,6 @@ export function iniciarMapa({
     abrirModalReporte();
   });
 
-  // Intenta centrar en la ubicación real del usuario si la comparte;
-  // si no da permiso o falla, el mapa se queda apuntando a Cali.
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (pos) => mapaLeaflet.setView([pos.coords.latitude, pos.coords.longitude], 14),
@@ -115,7 +108,7 @@ function tarjetaHTML(item) {
       </div>
       ${atendido ? '<span class="etiqueta resuelto">✅ Ya atendido</span>' : ''}
       ${desactualizada ? '<span class="etiqueta alerta">⚠️ Varias personas dicen que esto podría estar desactualizado</span>' : ''}
-      <p>${escaparHTML(item.descripcion || 'Sin descripción adicional.')}</p>
+      <p>${escaparHTML(item.descripcion || '')}</p>
       <div class="meta">
         ${item.localidad ? `<span>🏘️ ${escaparHTML(item.localidad)}</span>` : ''}
         ${typeof item.lat === 'number' ? `<span>📍 ${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}</span>` : ''}
@@ -132,13 +125,15 @@ function coincideLocalidad(item) {
   if (!filtroLocalidad) return true;
   return String(item.localidad || '').toLowerCase().includes(filtroLocalidad);
 }
+function coincideTipo(item) {
+  return filtroTipo === 'todos' || item.tipo === filtroTipo;
+}
 
 function itemsVisibles(items) {
   return items.filter((item) => {
-    const pasaLocalidad = coincideLocalidad(item);
     const desactualizada = (item.marcasDesactualizado || 0) >= UMBRAL_DESACTUALIZADO;
     const pasaEstado = mostrarAtendidos || (item.estado !== 'atendido' && !desactualizada);
-    return pasaLocalidad && pasaEstado;
+    return coincideLocalidad(item) && coincideTipo(item) && pasaEstado;
   });
 }
 
@@ -149,8 +144,8 @@ function renderLista(items, { agregar = false } = {}) {
   if (!agregar) cont.innerHTML = '';
   if (visibles.length === 0 && !agregar) {
     vacio.hidden = false;
-    vacio.textContent = filtroLocalidad
-      ? 'No hay reportes que coincidan con esa localidad todavía.'
+    vacio.textContent = (filtroLocalidad || filtroTipo !== 'todos')
+      ? 'No hay reportes que coincidan con ese filtro todavía.'
       : 'Todavía no hay reportes. Sé la primera persona en marcar dónde se necesita ayuda.';
   } else {
     vacio.hidden = true;
@@ -158,22 +153,9 @@ function renderLista(items, { agregar = false } = {}) {
   }
 }
 
-async function manejarAccionTarjeta(e) {
-  const boton = e.target.closest('[data-accion]');
-  if (!boton) return;
-  const { accion, id } = boton.dataset;
-  boton.disabled = true;
-  try {
-    if (accion === 'resolver') {
-      await controlador.marcarEstado(id, 'atendido');
-    } else if (accion === 'flagear') {
-      await controlador.reportarDesactualizado(id);
-      recordarMarcaDesactualizada(COLECCION_ID, id);
-    }
-  } catch (err) {
-    console.error(err);
-    boton.disabled = false;
-  }
+function refiltrarTodo() {
+  renderLista(itemsActuales);
+  pintarMarcadores(itemsVisibles(itemsActuales));
 }
 
 export function iniciarListaYRealtime() {
@@ -181,8 +163,7 @@ export function iniciarListaYRealtime() {
   controlador.escucharRecientes({
     onDatos: ({ items, deCache }) => {
       itemsActuales = items;
-      renderLista(items);
-      pintarMarcadores(itemsVisibles(items));
+      refiltrarTodo();
       avisoCache.hidden = !deCache;
     },
     onError: () => {
@@ -192,7 +173,23 @@ export function iniciarListaYRealtime() {
     }
   });
 
-  document.getElementById('lista-reportes').addEventListener('click', manejarAccionTarjeta);
+  document.getElementById('lista-reportes').addEventListener('click', async (e) => {
+    const boton = e.target.closest('[data-accion]');
+    if (!boton) return;
+    const { accion, id } = boton.dataset;
+    boton.disabled = true;
+    try {
+      if (accion === 'resolver') {
+        await controlador.marcarEstado(id, 'atendido');
+      } else if (accion === 'flagear') {
+        await controlador.reportarDesactualizado(id);
+        recordarMarcaDesactualizada(COLECCION_ID, id);
+      }
+    } catch (err) {
+      console.error(err);
+      boton.disabled = false;
+    }
+  });
 
   document.getElementById('btn-cargar-mas-reportes').addEventListener('click', async (e) => {
     e.target.disabled = true;
@@ -206,26 +203,55 @@ export function iniciarListaYRealtime() {
     e.target.hidden = !hayMas;
   });
 
+  // --- Filtro por localidad (texto manual o por GPS) ---
   const inputFiltro = document.getElementById('filtro-localidad-reportes');
   const btnLimpiar = document.getElementById('limpiar-filtro-reportes');
   inputFiltro.addEventListener('input', () => {
     filtroLocalidad = inputFiltro.value.trim().toLowerCase();
     btnLimpiar.hidden = !filtroLocalidad;
-    renderLista(itemsActuales);
-    pintarMarcadores(itemsVisibles(itemsActuales));
+    refiltrarTodo();
   });
   btnLimpiar.addEventListener('click', () => {
     inputFiltro.value = '';
     filtroLocalidad = '';
     btnLimpiar.hidden = true;
-    renderLista(itemsActuales);
-    pintarMarcadores(itemsVisibles(itemsActuales));
+    refiltrarTodo();
+  });
+
+  const btnGPS = document.getElementById('gps-filtro-reportes');
+  btnGPS.addEventListener('click', async () => {
+    btnGPS.disabled = true;
+    const textoOriginal = btnGPS.textContent;
+    btnGPS.textContent = '📡 Ubicando…';
+    try {
+      const ubicacion = await obtenerUbicacionPorGPS();
+      const texto = ubicacion.barrio || ubicacion.ciudad || '';
+      inputFiltro.value = texto;
+      filtroLocalidad = texto.toLowerCase();
+      btnLimpiar.hidden = !filtroLocalidad;
+      refiltrarTodo();
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo obtener tu ubicación. Revisa los permisos del navegador.');
+    } finally {
+      btnGPS.disabled = false;
+      btnGPS.textContent = textoOriginal;
+    }
+  });
+
+  // --- Filtro por tipo de ayuda ---
+  document.querySelectorAll('#filtro-tipo-reportes button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#filtro-tipo-reportes button').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      filtroTipo = btn.dataset.filtro;
+      refiltrarTodo();
+    });
   });
 
   document.getElementById('toggle-atendidos-reportes').addEventListener('change', (e) => {
     mostrarAtendidos = e.target.checked;
-    renderLista(itemsActuales);
-    pintarMarcadores(itemsVisibles(itemsActuales));
+    refiltrarTodo();
   });
 }
 
@@ -286,6 +312,17 @@ export function iniciarFormularioReporte() {
     const descripcion = limpiarTexto(document.getElementById('descripcion-reporte').value, 300);
     const localidad = limpiarTexto(document.getElementById('localidad-reporte').value, 100);
     const contacto = limpiarTexto(document.getElementById('contacto-reporte').value, 120);
+
+    if (!descripcion) {
+      msg.textContent = 'La descripción es obligatoria.';
+      msg.classList.add('error');
+      return;
+    }
+    if (!localidad) {
+      msg.textContent = 'La localidad / barrio es obligatoria.';
+      msg.classList.add('error');
+      return;
+    }
 
     const cooldown = puedeEnviar('reporte');
     if (!cooldown.ok) {

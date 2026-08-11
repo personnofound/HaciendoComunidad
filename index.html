@@ -55,10 +55,12 @@
     <div class="lista-cabecera">
       <h3>Reportes recientes</h3>
     </div>
+    <div class="filtro-inline" id="filtro-tipo-reportes"></div>
     <div class="filtro-localidad">
       <span class="icono">🏘️</span>
       <input type="text" id="filtro-localidad-reportes" placeholder="Filtrar por localidad o barrio…" aria-label="Filtrar reportes por localidad">
       <button type="button" class="limpiar" id="limpiar-filtro-reportes" hidden aria-label="Quitar filtro">✕</button>
+      <button type="button" class="btn-gps" id="gps-filtro-reportes" title="Usar mi ubicación">📡</button>
     </div>
     <label class="toggle-mostrar-todo">
       <input type="checkbox" id="toggle-atendidos-reportes">
@@ -72,25 +74,35 @@
 
   <!-- ===================== DESAPARECIDOS ===================== -->
   <section id="vista-desaparecidos" class="vista">
-    <h2 class="titulo-vista">Personas y mascotas desaparecidas</h2>
-    <p class="subtitulo-vista">Publica una ficha para que la comunidad ayude a buscar. Deja siempre un contacto.</p>
+    <h2 class="titulo-vista">Personas y mascotas</h2>
+    <p class="subtitulo-vista">Publica una ficha para que la comunidad ayude a buscar, o avisa si encontraste a alguien. Deja siempre un contacto.</p>
+
+    <div class="tabs-modo" id="tabs-modo-desaparecidos">
+      <button class="active" data-modo="busco">🔎 Buscando</button>
+      <button data-modo="encontre">✅ Encontrados</button>
+    </div>
 
     <form id="form-desaparecidos" class="form-card">
       <div class="fila">
-        <label>¿A quién buscas?</label>
+        <label>¿De quién se trata?</label>
         <div class="chips" id="chips-tipo-sujeto">
           <button type="button" class="chip" data-tipo-sujeto="persona" aria-pressed="true">🧍 Persona</button>
           <button type="button" class="chip" data-tipo-sujeto="mascota" aria-pressed="false">🐾 Mascota</button>
         </div>
       </div>
       <div class="fila">
-        <label for="nombre-desaparecido">Nombre</label>
-        <input type="text" id="nombre-desaparecido" maxlength="100" placeholder="Nombre de la persona o mascota">
+        <label for="nombre-desaparecido" id="label-nombre-desaparecido">Nombre (obligatorio)</label>
+        <input type="text" id="nombre-desaparecido" maxlength="100" required placeholder="Nombre de la persona o mascota">
       </div>
       <div class="fila">
         <label for="descripcion-desaparecido">Descripción (obligatorio)</label>
         <textarea id="descripcion-desaparecido" maxlength="400" required
           placeholder="Edad aproximada, ropa, señas particulares, raza y color si es mascota, etc."></textarea>
+      </div>
+      <div class="fila">
+        <label for="foto-desaparecido">Foto (opcional, máx. 5MB)</label>
+        <input type="file" id="foto-desaparecido" accept="image/*">
+        <p class="ayuda-campo" id="msg-foto-desaparecido"></p>
       </div>
       <div class="fila">
         <label for="localidad-desaparecido">Localidad / barrio</label>
@@ -105,12 +117,12 @@
         <input type="tel" id="contacto-desaparecido" maxlength="120" required placeholder="WhatsApp o teléfono">
         <p class="ayuda-campo">Solo se muestra este número, nunca datos privados adicionales.</p>
       </div>
-      <button type="submit" class="btn btn-primario">Publicar</button>
+      <button type="submit" class="btn btn-primario" id="btn-publicar-desaparecidos">Publicar búsqueda</button>
       <p class="msg-form" id="msg-form-desaparecidos"></p>
     </form>
 
     <div class="lista-cabecera">
-      <h3>Publicados recientemente</h3>
+      <h3 id="titulo-lista-desaparecidos">Publicados recientemente</h3>
     </div>
     <div class="filtro-inline" id="filtro-desaparecidos">
       <button class="active" data-filtro="todos">Todos</button>
@@ -121,10 +133,11 @@
       <span class="icono">🏘️</span>
       <input type="text" id="filtro-localidad-desaparecidos" placeholder="Filtrar por localidad o barrio…" aria-label="Filtrar por localidad">
       <button type="button" class="limpiar" id="limpiar-filtro-desaparecidos" hidden aria-label="Quitar filtro">✕</button>
+      <button type="button" class="btn-gps" id="gps-filtro-desaparecidos" title="Usar mi ubicación">📡</button>
     </div>
     <label class="toggle-mostrar-todo">
       <input type="checkbox" id="toggle-encontrados-desaparecidos">
-      Mostrar también los ya encontrados o marcados como desactualizados
+      <span id="toggle-encontrados-desaparecidos-texto">Mostrar también los ya encontrados o marcados como desactualizados</span>
     </label>
     <div id="aviso-cache-desaparecidos" class="aviso-cache" hidden>Mostrando la última copia guardada en este dispositivo. Actualizando…</div>
     <div id="lista-desaparecidos"></div>
@@ -178,9 +191,15 @@
       <button data-filtro="oferta">🤝 Ofrecen</button>
     </div>
     <div class="fila" style="margin-bottom:10px">
-      <select id="filtro-categoria-comunidad" aria-label="Filtrar por categoría">
+      <select id="filtro-categoria-comunidad" class="select-oscuro" aria-label="Filtrar por categoría">
         <option value="todas">Todas las categorías</option>
       </select>
+    </div>
+    <div class="filtro-localidad">
+      <span class="icono">🏘️</span>
+      <input type="text" id="filtro-zona-comunidad" placeholder="Filtrar por zona o barrio…" aria-label="Filtrar por zona">
+      <button type="button" class="limpiar" id="limpiar-filtro-zona-comunidad" hidden aria-label="Quitar filtro">✕</button>
+      <button type="button" class="btn-gps" id="gps-filtro-comunidad" title="Usar mi ubicación">📡</button>
     </div>
     <label class="toggle-mostrar-todo">
       <input type="checkbox" id="toggle-cubiertos-comunidad">
@@ -216,12 +235,12 @@
         <div class="chips" id="chips-tipo-ayuda"></div>
       </div>
       <div class="fila">
-        <label for="descripcion-reporte">Descripción</label>
-        <textarea id="descripcion-reporte" maxlength="300" placeholder="¿Qué está pasando? ¿Cuántas personas? ¿Urgencia?"></textarea>
+        <label for="descripcion-reporte">Descripción (obligatorio)</label>
+        <textarea id="descripcion-reporte" maxlength="300" required placeholder="¿Qué está pasando? ¿Cuántas personas? ¿Urgencia?"></textarea>
       </div>
       <div class="fila">
-        <label for="localidad-reporte">Localidad / barrio</label>
-        <input type="text" id="localidad-reporte" maxlength="100" placeholder="Ej: San Fernando, Comuna 17…">
+        <label for="localidad-reporte">Localidad / barrio (obligatorio)</label>
+        <input type="text" id="localidad-reporte" maxlength="100" required placeholder="Ej: San Fernando, Comuna 17…">
       </div>
       <div class="fila">
         <label for="contacto-reporte">Contacto (opcional)</label>
@@ -250,11 +269,16 @@
   // (se hace aquí de forma simple para no depender de más módulos)
 </script>
 <script type="module">
-  import { TIPOS_AYUDA } from './js/mapa.js';
+  import { TIPOS_AYUDA } from './js/config.js';
   const leyenda = document.getElementById('leyenda-mapa');
   leyenda.innerHTML = TIPOS_AYUDA.map(t => `<span><i style="background:${t.color}"></i>${t.etiqueta}</span>`).join('');
+
   const chips = document.getElementById('chips-tipo-ayuda');
   chips.innerHTML = TIPOS_AYUDA.map(t => `<button type="button" class="chip" data-tipo="${t.id}" aria-pressed="false">${t.etiqueta}</button>`).join('');
+
+  const filtroTipo = document.getElementById('filtro-tipo-reportes');
+  filtroTipo.innerHTML = '<button class="active" data-filtro="todos">Todos</button>' +
+    TIPOS_AYUDA.map(t => `<button data-filtro="${t.id}">${t.etiqueta}</button>`).join('');
 </script>
 <script type="module" src="./js/app.js"></script>
 

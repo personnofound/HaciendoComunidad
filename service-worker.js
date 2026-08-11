@@ -1,4 +1,6 @@
-const CACHE_NAME = 'haciendo-comunidad-shell-v3';
+// service-worker.js
+
+const CACHE_NAME = 'haciendo-comunidad-shell-v4';
 
 const SHELL_FILES = [
   './',
@@ -8,6 +10,7 @@ const SHELL_FILES = [
   './js/utils.js',
   './js/cache.js',
   './js/firebase-init.js',
+  './js/fotos.js',
   './js/datos.js',
   './js/mapa.js',
   './js/desaparecidos.js',
@@ -42,12 +45,13 @@ self.addEventListener('fetch', (event) => {
     url.origin.includes('googleapis.com') ||
     url.origin.includes('firebaseio.com') ||
     url.origin.includes('firebaseapp.com') ||
+    url.origin.includes('firebasestorage.app') ||
     url.origin.includes('gstatic.com') ||
     url.origin.includes('unpkg.com') ||
-    url.origin.includes('recaptcha');
+    url.origin.includes('openstreetmap.org');
 
   if (isThirdParty || event.request.method !== 'GET') {
-    return;
+    return; // deja pasar a la red normalmente
   }
 
   event.respondWith(

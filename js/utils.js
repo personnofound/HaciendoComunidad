@@ -100,3 +100,32 @@ export function yaMarcadaComoDesactualizada(coleccionId, docId) {
 export function recordarMarcaDesactualizada(coleccionId, docId) {
   agregarAListaLocal(`flag_desactualizado_${coleccionId}`, docId);
 }
+export async function obtenerUbicacionPorGPS() {
+  if (!navigator.geolocation) {
+    throw new Error('Este navegador no soporta geolocalización.');
+  }
+  const posicion = await new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 });
+  });
+  const { latitude: lat, longitude: lng } = posicion.coords;
+
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
+  const respuesta = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+  if (!respuesta.ok) throw new Error('No se pudo consultar la ubicación.');
+  const datos = await respuesta.json();
+  const dir = datos.address || {};
+
+  const barrio = dir.neighbourhood || dir.suburb || dir.quarter || dir.city_district || '';
+  const ciudad = dir.city || dir.town || dir.village || dir.municipality || '';
+  const pais = dir.country || '';
+
+  const partes = [barrio, ciudad, pais].filter(Boolean);
+  return {
+    lat,
+    lng,
+    barrio,
+    ciudad,
+    pais,
+    texto: partes.join(', ') || (datos.display_name || '')
+  };
+}

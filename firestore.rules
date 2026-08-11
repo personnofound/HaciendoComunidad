@@ -9,6 +9,10 @@ service cloud.firestore {
     return valor == null || (valor is string && valor.size() <= maxLargo);
   }
 
+  function esTextoRequerido(valor, maxLargo) {
+    return valor is string && valor.size() > 0 && valor.size() <= maxLargo;
+  }
+
   function timestampEsDelServidor() {
     return request.resource.data.timestamp == request.time;
   }
@@ -17,12 +21,6 @@ service cloud.firestore {
   // cambió en esta escritura sea exactamente "campo".
   function soloCambioDeCampo(campo) {
     return request.resource.data.diff(resource.data).affectedKeys().hasOnly([campo]);
-  }
-
-  function esAvanceDeEstado(estadoActual, estadoNuevo) {
-    return soloCambioDeCampo('estado') &&
-      resource.data.estado == estadoActual &&
-      request.resource.data.estado == estadoNuevo;
   }
 
   function esVotoDesactualizado() {
@@ -43,8 +41,8 @@ service cloud.firestore {
 
       allow create: if timestampEsDelServidor() &&
         esTextoValido(request.resource.data.tipo, 30) &&
-        esTextoOpcionalValido(request.resource.data.descripcion, 300) &&
-        esTextoOpcionalValido(request.resource.data.localidad, 100) &&
+        esTextoRequerido(request.resource.data.descripcion, 300) &&
+        esTextoRequerido(request.resource.data.localidad, 100) &&
         esTextoOpcionalValido(request.resource.data.contacto, 120) &&
         request.resource.data.estado == 'activo' &&
         request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90 &&
@@ -52,27 +50,42 @@ service cloud.firestore {
         request.resource.data.reportesAbuso == 0 &&
         request.resource.data.marcasDesactualizado == 0;
 
-      allow update: if esAvanceDeEstado('activo', 'atendido') || esVotoDesactualizado() || esVotoAbuso();
+      allow update: if (
+        soloCambioDeCampo('estado') &&
+        resource.data.estado == 'activo' &&
+        request.resource.data.estado == 'atendido'
+      ) || esVotoDesactualizado() || esVotoAbuso();
 
       allow delete: if false;
     }
 
-    // -------------------- Desaparecidos (personas y mascotas) --------------------
+    // -------------------- Desaparecidos y encontrados (personas y mascotas) --------------------
     match /desaparecidos/{docId} {
       allow read: if true;
 
       allow create: if timestampEsDelServidor() &&
+        request.resource.data.modo in ['busco', 'encontre'] &&
         request.resource.data.tipoSujeto in ['persona', 'mascota'] &&
-        esTextoOpcionalValido(request.resource.data.nombre, 100) &&
-        esTextoValido(request.resource.data.descripcion, 400) &&
+        (request.resource.data.modo == 'busco'
+          ? esTextoRequerido(request.resource.data.nombre, 100)
+          : esTextoOpcionalValido(request.resource.data.nombre, 100)) &&
+        esTextoRequerido(request.resource.data.descripcion, 400) &&
         esTextoOpcionalValido(request.resource.data.localidad, 100) &&
         esTextoOpcionalValido(request.resource.data.ultimaUbicacion, 150) &&
-        esTextoValido(request.resource.data.contacto, 120) &&
-        request.resource.data.estado == 'buscando' &&
+        esTextoOpcionalValido(request.resource.data.fotoUrl, 500) &&
+        esTextoRequerido(request.resource.data.contacto, 120) &&
+        (request.resource.data.modo == 'busco'
+          ? request.resource.data.estado == 'buscando'
+          : request.resource.data.estado == 'disponible') &&
         request.resource.data.reportesAbuso == 0 &&
         request.resource.data.marcasDesactualizado == 0;
 
-      allow update: if esAvanceDeEstado('buscando', 'encontrado') || esVotoDesactualizado() || esVotoAbuso();
+      allow update: if (
+        soloCambioDeCampo('estado') && (
+          (resource.data.modo == 'busco' && resource.data.estado == 'buscando' && request.resource.data.estado == 'encontrado') ||
+          (resource.data.modo == 'encontre' && resource.data.estado == 'disponible' && request.resource.data.estado == 'reclamado')
+        )
+      ) || esVotoDesactualizado() || esVotoAbuso();
 
       allow delete: if false;
     }
@@ -84,15 +97,19 @@ service cloud.firestore {
       allow create: if timestampEsDelServidor() &&
         request.resource.data.tipoPublicacion in ['peticion', 'oferta'] &&
         esTextoValido(request.resource.data.categoria, 40) &&
-        esTextoValido(request.resource.data.servicio, 100) &&
+        esTextoRequerido(request.resource.data.servicio, 100) &&
         esTextoOpcionalValido(request.resource.data.descripcion, 300) &&
         esTextoOpcionalValido(request.resource.data.zona, 120) &&
-        esTextoValido(request.resource.data.contacto, 120) &&
+        esTextoRequerido(request.resource.data.contacto, 120) &&
         request.resource.data.estado == 'abierto' &&
         request.resource.data.reportesAbuso == 0 &&
         request.resource.data.marcasDesactualizado == 0;
 
-      allow update: if esAvanceDeEstado('abierto', 'cubierto') || esVotoDesactualizado() || esVotoAbuso();
+      allow update: if (
+        soloCambioDeCampo('estado') &&
+        resource.data.estado == 'abierto' &&
+        request.resource.data.estado == 'cubierto'
+      ) || esVotoDesactualizado() || esVotoAbuso();
 
       allow delete: if false;
     }

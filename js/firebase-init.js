@@ -5,12 +5,19 @@ import {
   enableIndexedDbPersistence,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 import { firebaseConfig } from './config.js';
 
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
-export { serverTimestamp };
+export const storage = getStorage(app);
+export { serverTimestamp, storageRef, uploadBytes, getDownloadURL };
 
 // Persistencia offline: Firestore guarda una copia local en IndexedDB y
 // encola las escrituras hechas sin conexión para enviarlas al reconectar.
