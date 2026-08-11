@@ -1,10 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
 
-  function tieneAppCheck() {
-    return request.app != null;
-  }
-
   function esTextoValido(valor, maxLargo) {
     return valor is string && valor.size() <= maxLargo;
   }
@@ -17,6 +13,8 @@ service cloud.firestore {
     return request.resource.data.timestamp == request.time;
   }
 
+  // Verifica que, comparado con el documento actual, el único campo que
+  // cambió en esta escritura sea exactamente "campo".
   function soloCambioDeCampo(campo) {
     return request.resource.data.diff(resource.data).affectedKeys().hasOnly([campo]);
   }
@@ -32,20 +30,18 @@ service cloud.firestore {
       request.resource.data.marcasDesactualizado == resource.data.marcasDesactualizado + 1;
   }
 
-  function esAdmin() {
-    return request.auth != null &&
-      request.auth.uid in [
-       'fBcubXcOZBMIJxCDUAeV0aPwJv33'
-      ];
+  function esVotoAbuso() {
+    return soloCambioDeCampo('reportesAbuso') &&
+      request.resource.data.reportesAbuso == resource.data.reportesAbuso + 1;
   }
 
   match /databases/{database}/documents {
 
+    // -------------------- Reportes de ayuda (mapa) --------------------
     match /reportes_ayuda/{docId} {
       allow read: if true;
 
-      allow create: if tieneAppCheck() &&
-        timestampEsDelServidor() &&
+      allow create: if timestampEsDelServidor() &&
         esTextoValido(request.resource.data.tipo, 30) &&
         esTextoOpcionalValido(request.resource.data.descripcion, 300) &&
         esTextoOpcionalValido(request.resource.data.localidad, 100) &&
@@ -56,18 +52,16 @@ service cloud.firestore {
         request.resource.data.reportesAbuso == 0 &&
         request.resource.data.marcasDesactualizado == 0;
 
-      allow update: if esAdmin() || (tieneAppCheck() && (
-        esAvanceDeEstado('activo', 'atendido') || esVotoDesactualizado()
-      ));
+      allow update: if esAvanceDeEstado('activo', 'atendido') || esVotoDesactualizado() || esVotoAbuso();
 
-      allow delete: if esAdmin();
+      allow delete: if false;
     }
 
+    // -------------------- Desaparecidos (personas y mascotas) --------------------
     match /desaparecidos/{docId} {
       allow read: if true;
 
-      allow create: if tieneAppCheck() &&
-        timestampEsDelServidor() &&
+      allow create: if timestampEsDelServidor() &&
         request.resource.data.tipoSujeto in ['persona', 'mascota'] &&
         esTextoOpcionalValido(request.resource.data.nombre, 100) &&
         esTextoValido(request.resource.data.descripcion, 400) &&
@@ -78,18 +72,16 @@ service cloud.firestore {
         request.resource.data.reportesAbuso == 0 &&
         request.resource.data.marcasDesactualizado == 0;
 
-      allow update: if esAdmin() || (tieneAppCheck() && (
-        esAvanceDeEstado('buscando', 'encontrado') || esVotoDesactualizado()
-      ));
+      allow update: if esAvanceDeEstado('buscando', 'encontrado') || esVotoDesactualizado() || esVotoAbuso();
 
-      allow delete: if esAdmin();
+      allow delete: if false;
     }
 
+    // -------------------- Comunidad (peticiones y ofertas) --------------------
     match /comunidad_servicios/{docId} {
       allow read: if true;
 
-      allow create: if tieneAppCheck() &&
-        timestampEsDelServidor() &&
+      allow create: if timestampEsDelServidor() &&
         request.resource.data.tipoPublicacion in ['peticion', 'oferta'] &&
         esTextoValido(request.resource.data.categoria, 40) &&
         esTextoValido(request.resource.data.servicio, 100) &&
@@ -100,13 +92,12 @@ service cloud.firestore {
         request.resource.data.reportesAbuso == 0 &&
         request.resource.data.marcasDesactualizado == 0;
 
-      allow update: if esAdmin() || (tieneAppCheck() && (
-        esAvanceDeEstado('abierto', 'cubierto') || esVotoDesactualizado()
-      ));
+      allow update: if esAvanceDeEstado('abierto', 'cubierto') || esVotoDesactualizado() || esVotoAbuso();
 
-      allow delete: if esAdmin();
+      allow delete: if false;
     }
 
+    // Cualquier otra colección no listada arriba queda bloqueada por defecto.
     match /{document=**} {
       allow read, write: if false;
     }

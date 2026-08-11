@@ -9,8 +9,6 @@ export const firebaseConfig = {
   measurementId: "G-EVKP1YVW2K"
 };
 
-export const RECAPTCHA_SITE_KEY = "6LcuSIEtAAAAADJgDJUrhwoncwlbZwJda40Ouq2n";
-
 export const COLECCIONES = {
   reportes: "reportes_ayuda",
   desaparecidos: "desaparecidos",

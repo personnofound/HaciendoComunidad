@@ -6,6 +6,9 @@
 //   - "cargar más" paginado (sin listener, para no gastar cuota) ordenado
 //     por los más recientes
 //   - creación de documentos con timestamp forzado por el servidor
+//   - actualización acotada: solo "estado", "marcasDesactualizado" o
+//     "reportesAbuso" (todo esto validado también del lado del servidor
+//     en firestore.rules, no solo aquí)
 //
 import {
   collection,
@@ -126,5 +129,23 @@ export function crearControladorDatos(nombreColeccion) {
     return updateDoc(doc(db, nombreColeccion, id), { marcasDesactualizado: increment(1) });
   }
 
-  return { escucharRecientes, detenerEscucha, cargarSiguientePagina, crear, marcarEstado, reportarDesactualizado };
+  /**
+   * Suma un "voto" de que esta publicación es abusiva/spam. Igual que el
+   * anterior: las reglas solo permiten subir este contador de a 1. No hay
+   * un botón para esto en la interfaz todavía; queda listo por si más
+   * adelante quieres agregarlo.
+   */
+  async function reportarAbuso(id) {
+    return updateDoc(doc(db, nombreColeccion, id), { reportesAbuso: increment(1) });
+  }
+
+  return {
+    escucharRecientes,
+    detenerEscucha,
+    cargarSiguientePagina,
+    crear,
+    marcarEstado,
+    reportarDesactualizado,
+    reportarAbuso
+  };
 }
