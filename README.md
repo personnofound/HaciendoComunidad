@@ -10,20 +10,6 @@ Aplicación para pedir ayuda en tiempo real durante una emergencia sísmica, rep
 - **Contra la desinformación**: quien crea una publicación puede marcarla como resuelta ("ya fue atendido", "ya se encontró", "ya está cubierto / ya no tengo más"), y cualquiera puede marcar una publicación como "🚩 desactualizada". Al llegar a varias marcas, se oculta sola del feed principal (queda visible con el interruptor "mostrar también..."). Ver la sección 8 para el detalle y sus límites.
 
 
-## 5. Subir el proyecto a GitHub
-
-```bash
-cd haciendo-comunidad
-git init
-git add .
-git commit -m "Primera versión: mapa de ayuda, desaparecidos y comunidad"
-git branch -M main
-git remote add origin https://github.com/TU_USUARIO/TU_REPO.git
-git push -u origin main
-```
-
----
-
 ## 6. Desplegar el sitio (gratis, con CDN global)
 
 Recomiendo **Firebase Hosting**: es gratis, va en el mismo proyecto que ya creaste, tiene CDN global (rápido en cualquier país) y HTTPS automático.
