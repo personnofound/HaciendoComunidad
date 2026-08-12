@@ -15,7 +15,7 @@ export const COLECCIONES = {
   comunidad: "comunidad_servicios"
 };
 
-export const TAMANO_PAGINA = 15;
+export const TAMANO_PAGINA = 30;
 
 export const UBICACION_POR_DEFECTO = { lat: 3.4216, lng: -76.5320, zoom: 11 };
 
