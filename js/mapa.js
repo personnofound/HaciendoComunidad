@@ -97,7 +97,7 @@ function tarjetaHTML(item) {
     acciones.push(`<button type="button" class="btn-mini resolver" data-accion="resolver" data-id="${item.id}">✅ Marcar como atendido</button>`);
   }
   if (!atendido && !yaFlageada) {
-    acciones.push(`<button type="button" class="btn-mini" data-accion="flagear" data-id="${item.id}">🚩 Ya no aplica / desactualizado</button>`);
+    acciones.push(`<button type="button" class="btn-mini" data-accion="flagear" data-id="${item.id}">🚩 Marcar como "Ya no aplica / desactualizado"</button>`);
   }
 
   return `

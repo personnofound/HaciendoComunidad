@@ -17,7 +17,7 @@ export const COLECCIONES = {
 
 export const TAMANO_PAGINA = 15;
 
-export const UBICACION_POR_DEFECTO = { lat: 3.4516, lng: -76.5320, zoom: 12 };
+export const UBICACION_POR_DEFECTO = { lat: 3.4216, lng: -76.5320, zoom: 11 };
 
 export const CATEGORIAS_COMUNIDAD = [
   { id: 'agua', etiqueta: 'Agua' },
@@ -37,12 +37,14 @@ export const TIPOS_AYUDA = [
   { id: 'agua', etiqueta: 'Agua', color: '#3b82c4' },
   { id: 'alimentos', etiqueta: 'Alimentos', color: '#d9a441' },
   { id: 'refugio', etiqueta: 'Refugio / Techo', color: '#8e6fce' },
+  { id: 'colapso', etiqueta: 'Colapso de Infraestructura', color: '#27ae60' },
+  { id: 'via', etiqueta: 'Vía Cerrada', color: '#e67e22' },
   { id: 'otro', etiqueta: 'Otro', color: '#7a8a99' }
 ];
 
 export const ENFRIAMIENTO_SEGUNDOS = 30;
 
-export const UMBRAL_DESACTUALIZADO = 8;
+export const UMBRAL_DESACTUALIZADO = 15;
 
 export const TAMANO_MAX_FOTO_MB = 5;
 export const TAMANO_MAX_FOTO_BYTES = TAMANO_MAX_FOTO_MB * 1024 * 1024;
