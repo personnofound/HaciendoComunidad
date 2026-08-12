@@ -263,8 +263,10 @@ form.form-card .chip[aria-pressed="true"]{
 .tarjeta .btn-mini{
   font-size:12px; padding:6px 10px; border-radius:8px; cursor:pointer;
   border:1px solid var(--line); background:var(--panel-2); color:var(--text);
+  text-decoration:none; display:inline-block;
 }
 .tarjeta .btn-mini.resolver{border-color:var(--safe); color:#9fe0ba}
+.tarjeta .btn-mini.direccion{border-color:var(--info); color:#a9d3f2}
 .tarjeta .btn-mini:disabled{opacity:.6; cursor:default}
 .tarjeta .nota-flageada{font-size:11.5px; color:var(--warn); margin-top:4px}
 

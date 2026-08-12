@@ -94,6 +94,10 @@ function tarjetaHTML(item) {
   const yaFlageada = yaMarcadaComoDesactualizada(COLECCION_ID, item.id);
 
   const acciones = [];
+  if (typeof item.lat === 'number' && typeof item.lng === 'number') {
+    const urlRuta = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+    acciones.push(`<a class="btn-mini direccion" href="${urlRuta}" target="_blank" rel="noopener noreferrer">🧭 Cómo llegar</a>`);
+  }
   if (!atendido && esMia) {
     acciones.push(`<button type="button" class="btn-mini resolver" data-accion="resolver" data-id="${item.id}">✅ Marcar como atendido</button>`);
   }
