@@ -2,6 +2,7 @@
 import { iniciarMapa, iniciarListaYRealtime, iniciarFormularioReporte, refrescarTamanoMapa } from './mapa.js';
 import { iniciarListaYRealtimeDesaparecidos, iniciarFormularioDesaparecidos } from './desaparecidos.js';
 import { iniciarListaYRealtimeComunidad, iniciarFormularioComunidad } from './comunidad.js';
+import { iniciarAviso } from './aviso.js';
 
 // ---------- Pestañas ----------
 function iniciarTabs() {
@@ -94,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
   iniciarEstadoConexion();
   iniciarInstalacionPWA();
   registrarServiceWorker();
+  iniciarAviso();
 
   iniciarMapa();
   iniciarListaYRealtime();

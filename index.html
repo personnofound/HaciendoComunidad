@@ -32,6 +32,8 @@
   <span id="estado-conexion">Conectando…</span>
 </header>
 
+<div id="contenedor-avisos" hidden></div>
+
 <nav class="tabs" aria-label="Secciones">
   <button class="active" data-vista="vista-mapa">🆘 Mapa de ayuda</button>
   <button data-vista="vista-desaparecidos">🔎 Desaparecidos</button>
@@ -226,6 +228,13 @@
       <button type="button" class="btn btn-secundario" id="btn-cerrar-modal-reporte" style="padding:6px 12px">✕</button>
     </div>
     <p class="tip-mapa" id="coords-reporte">Toca el mapa para marcar la ubicación</p>
+
+    <div class="buscador-direccion">
+      <input type="text" id="buscar-direccion-reporte" placeholder="Escribe una dirección o punto de referencia…" aria-label="Buscar dirección">
+      <button type="button" id="btn-buscar-direccion" aria-label="Buscar">🔎</button>
+    </div>
+    <ul class="resultados-direccion" id="resultados-direccion" hidden></ul>
+
     <button type="button" class="btn btn-secundario" id="btn-usar-mi-ubicacion" style="width:100%; margin-bottom:12px">
       📡 Usar mi ubicación (GPS)
     </button>

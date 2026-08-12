@@ -65,6 +65,33 @@ header.top h1 small{display:block; font-weight:400; font-size:11px; color:var(--
 #estado-conexion.offline{color:#f3c9c2;border-color:var(--urgent)}
 
 /* ---------- Tabs ---------- */
+#contenedor-avisos[hidden]{display:none}
+.franja-aviso{
+  background:linear-gradient(180deg, #3a2f1a, #2b2413);
+  border-bottom:1px solid var(--warn);
+  padding:10px 14px;
+  display:flex; align-items:flex-start; gap:10px;
+}
+.franja-aviso-icono{font-size:18px; line-height:1; flex-shrink:0; margin-top:1px}
+.franja-aviso-texto{flex:1; min-width:0}
+.franja-aviso-texto strong{
+  display:block; font-size:13px; color:var(--warn); margin-bottom:2px;
+}
+.franja-aviso-texto p{
+  margin:0; font-size:13px; color:var(--text); line-height:1.4;
+  word-wrap:break-word;
+}
+.franja-aviso-link{
+  display:inline-block; margin-top:6px; font-size:12.5px; font-weight:600;
+  color:var(--warn); text-decoration:underline; text-underline-offset:2px;
+}
+.franja-aviso-link:hover{color:#f0d18c}
+.franja-aviso .btn-cerrar-aviso{
+  background:none; border:none; color:var(--text-dim); font-size:16px;
+  cursor:pointer; padding:2px 6px; flex-shrink:0; line-height:1;
+}
+.franja-aviso .btn-cerrar-aviso:hover{color:var(--text)}
+
 nav.tabs{
   position:sticky; top:53px; z-index:40;
   display:flex; background:var(--panel-2);
@@ -108,6 +135,36 @@ p.subtitulo-vista{color:var(--text-dim); font-size:13px; margin:0 0 14px}
   font-size:12.5px; color:var(--text-dim); background:var(--panel);
   border:1px dashed var(--line); border-radius:var(--radius);
   padding:8px 10px; margin-bottom:14px;
+}
+
+.buscador-direccion{
+  display:flex; gap:8px; margin-bottom:8px;
+}
+.buscador-direccion input{
+  flex:1; padding:10px; border-radius:8px; border:1px solid var(--line);
+  background:var(--bg); color:var(--text); font-size:14px;
+}
+.buscador-direccion button{
+  border:none; background:var(--info); color:#fff; border-radius:8px;
+  width:44px; flex-shrink:0; cursor:pointer; font-size:16px;
+}
+.buscador-direccion button:disabled{opacity:.6; cursor:default}
+
+.resultados-direccion{
+  list-style:none; margin:0 0 12px; padding:0;
+  border:1px solid var(--line); border-radius:8px; overflow:hidden;
+  background:var(--panel);
+}
+.resultados-direccion[hidden]{display:none}
+.resultados-direccion li button{
+  width:100%; text-align:left; padding:10px 12px; font-size:13px;
+  background:none; border:none; color:var(--text); cursor:pointer;
+  border-bottom:1px solid var(--line);
+}
+.resultados-direccion li:last-child button{border-bottom:none}
+.resultados-direccion li button:hover{background:var(--panel-2)}
+.resultados-direccion .sin-resultados{
+  padding:10px 12px; font-size:12.5px; color:var(--text-dim);
 }
 
 /* ---------- Formularios ---------- */

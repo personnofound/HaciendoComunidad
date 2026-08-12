@@ -4,7 +4,7 @@ import { COLECCIONES, UBICACION_POR_DEFECTO, UMBRAL_DESACTUALIZADO, TIPOS_AYUDA 
 import {
   escaparHTML, limpiarTexto, puedeEnviar, marcarEnviado, tiempoRelativo, linkContacto,
   esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada,
-  obtenerUbicacionPorGPS
+  obtenerUbicacionPorGPS, buscarDireccion
 } from './utils.js';
 
 export { TIPOS_AYUDA };
@@ -14,6 +14,7 @@ const COLECCION_ID = COLECCIONES.reportes;
 
 let mapaLeaflet = null;
 let capaMarcadores = null;
+let marcadorBusqueda = null;
 let ubicacionSeleccionada = null; // {lat, lng}
 let tipoSeleccionado = null;
 let itemsActuales = [];
@@ -261,9 +262,33 @@ function abrirModalReporte() {
   document.getElementById('coords-reporte').textContent = ubicacionSeleccionada
     ? `📍 ${ubicacionSeleccionada.lat.toFixed(5)}, ${ubicacionSeleccionada.lng.toFixed(5)}`
     : 'Toca el mapa para marcar la ubicación';
+
+  const inputBuscar = document.getElementById('buscar-direccion-reporte');
+  const listaResultados = document.getElementById('resultados-direccion');
+  if (inputBuscar) inputBuscar.value = '';
+  if (listaResultados) {
+    listaResultados.hidden = true;
+    listaResultados.innerHTML = '';
+  }
 }
 function cerrarModalReporte() {
   document.getElementById('modal-reporte').hidden = true;
+  if (marcadorBusqueda && mapaLeaflet) {
+    mapaLeaflet.removeLayer(marcadorBusqueda);
+    marcadorBusqueda = null;
+  }
+}
+
+function fijarUbicacionElegida(lat, lng, sufijoTexto = '') {
+  ubicacionSeleccionada = { lat, lng };
+  document.getElementById('coords-reporte').textContent =
+    `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}${sufijoTexto}`;
+
+  if (mapaLeaflet) {
+    if (marcadorBusqueda) mapaLeaflet.removeLayer(marcadorBusqueda);
+    marcadorBusqueda = L.marker([lat, lng]).addTo(mapaLeaflet);
+    mapaLeaflet.setView([lat, lng], 16);
+  }
 }
 
 export function iniciarFormularioReporte() {
@@ -283,10 +308,61 @@ export function iniciarFormularioReporte() {
   document.getElementById('btn-usar-mi-ubicacion').addEventListener('click', () => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition((pos) => {
-      ubicacionSeleccionada = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      document.getElementById('coords-reporte').textContent =
-        `📍 ${ubicacionSeleccionada.lat.toFixed(5)}, ${ubicacionSeleccionada.lng.toFixed(5)} (GPS)`;
+      fijarUbicacionElegida(pos.coords.latitude, pos.coords.longitude, ' (GPS)');
     });
+  });
+
+  // --- Buscador de direcciones (para no depender de tocar el mapa) ---
+  const inputBuscar = document.getElementById('buscar-direccion-reporte');
+  const btnBuscar = document.getElementById('btn-buscar-direccion');
+  const listaResultados = document.getElementById('resultados-direccion');
+
+  async function ejecutarBusquedaDireccion() {
+    const consulta = inputBuscar.value.trim();
+    if (!consulta) return;
+    btnBuscar.disabled = true;
+    const textoOriginal = btnBuscar.textContent;
+    btnBuscar.textContent = '…';
+    try {
+      const resultados = await buscarDireccion(consulta, {
+        cercaDe: { lat: UBICACION_POR_DEFECTO.lat, lng: UBICACION_POR_DEFECTO.lng }
+      });
+
+      if (resultados.length === 0) {
+        listaResultados.innerHTML = '<li class="sin-resultados">No se encontraron resultados. Prueba con otra dirección o punto de referencia.</li>';
+        listaResultados.hidden = false;
+        return;
+      }
+
+      listaResultados.innerHTML = resultados
+        .map((r, i) => `<li><button type="button" data-i="${i}">📍 ${escaparHTML(r.texto)}</button></li>`)
+        .join('');
+      listaResultados.hidden = false;
+
+      listaResultados.querySelectorAll('button').forEach((btn, i) => {
+        btn.addEventListener('click', () => {
+          const r = resultados[i];
+          fijarUbicacionElegida(r.lat, r.lng);
+          listaResultados.hidden = true;
+          listaResultados.innerHTML = '';
+        });
+      });
+    } catch (err) {
+      console.error(err);
+      listaResultados.innerHTML = '<li class="sin-resultados">No se pudo buscar. Revisa tu conexión e intenta de nuevo.</li>';
+      listaResultados.hidden = false;
+    } finally {
+      btnBuscar.disabled = false;
+      btnBuscar.textContent = textoOriginal;
+    }
+  }
+
+  btnBuscar.addEventListener('click', ejecutarBusquedaDireccion);
+  inputBuscar.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      ejecutarBusquedaDireccion();
+    }
   });
 
   document.getElementById('btn-cerrar-modal-reporte').addEventListener('click', cerrarModalReporte);

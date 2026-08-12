@@ -131,3 +131,33 @@ export async function obtenerUbicacionPorGPS() {
     texto: partes.join(', ') || (datos.display_name || '')
   };
 }
+
+export async function buscarDireccion(consulta, { cercaDe } = {}) {
+  const texto = String(consulta || '').trim();
+  if (!texto) return [];
+
+  const params = new URLSearchParams({
+    format: 'jsonv2',
+    q: texto,
+    limit: '5',
+    addressdetails: '1'
+  });
+
+  if (cercaDe) {
+    const { lat, lng, radio = 0.6 } = cercaDe;
+    params.set('viewbox', `${lng - radio},${lat + radio},${lng + radio},${lat - radio}`);
+    params.set('bounded', '0');
+  }
+
+  const respuesta = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
+    headers: { 'Accept-Language': 'es' }
+  });
+  if (!respuesta.ok) throw new Error('No se pudo buscar la dirección.');
+  const datos = await respuesta.json();
+
+  return datos.map((r) => ({
+    lat: parseFloat(r.lat),
+    lng: parseFloat(r.lon),
+    texto: r.display_name
+  }));
+}

@@ -1,6 +1,6 @@
 // service-worker.js
 
-const CACHE_NAME = 'haciendo-comunidad-shell-v4';
+const CACHE_NAME = 'haciendo-comunidad-shell-v7';
 
 const SHELL_FILES = [
   './',
@@ -11,6 +11,8 @@ const SHELL_FILES = [
   './js/cache.js',
   './js/firebase-init.js',
   './js/fotos.js',
+  './js/avisos-config.js',
+  './js/aviso.js',
   './js/datos.js',
   './js/mapa.js',
   './js/desaparecidos.js',
