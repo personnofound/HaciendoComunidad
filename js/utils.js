@@ -30,7 +30,9 @@ export function marcarEnviado(idFormulario) {
 // --- Formato de tiempo relativo en español ---
 export function tiempoRelativo(fecha) {
   if (!fecha) return 'justo ahora';
-  const segundos = Math.floor((Date.now() - fecha.getTime()) / 1000);
+  const fechaValida = fecha instanceof Date ? fecha : new Date(fecha);
+  if (isNaN(fechaValida.getTime())) return 'justo ahora';
+  const segundos = Math.floor((Date.now() - fechaValida.getTime()) / 1000);
   if (segundos < 30) return 'justo ahora';
   if (segundos < 60) return `hace ${segundos}s`;
   const min = Math.floor(segundos / 60);

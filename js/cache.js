@@ -25,6 +25,15 @@ export function leerDeCache(coleccion) {
     if (!crudo) return null;
     const paquete = JSON.parse(crudo);
     if (paquete.v !== VERSION) return null;
+
+    // JSON.parse deja _fecha como texto (string), no como objeto Date.
+    // Lo reconstruimos acá para que el resto de la app pueda usar
+    // .getTime() y demás métodos de Date sin fallar.
+    paquete.items = (paquete.items || []).map((item) => ({
+      ...item,
+      _fecha: item._fecha ? new Date(item._fecha) : new Date()
+    }));
+
     return paquete;
   } catch (e) {
     return null;
