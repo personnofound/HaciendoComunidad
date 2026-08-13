@@ -1,6 +1,6 @@
 // service-worker.js
 
-const CACHE_NAME = 'haciendo-comunidad-shell-v11';
+const CACHE_NAME = 'haciendo-comunidad-shell-v12';
 
 const SHELL_FILES = [
   './',
@@ -13,6 +13,7 @@ const SHELL_FILES = [
   './js/fotos.js',
   './js/avisos-config.js',
   './js/aviso.js',
+  './js/sismos.js',
   './js/auth.js',
   './js/datos.js',
   './js/mapa.js',
@@ -51,7 +52,8 @@ self.addEventListener('fetch', (event) => {
     url.origin.includes('firebasestorage.app') ||
     url.origin.includes('gstatic.com') ||
     url.origin.includes('unpkg.com') ||
-    url.origin.includes('openstreetmap.org');
+    url.origin.includes('openstreetmap.org') ||
+    url.origin.includes('seismicportal.eu');
 
   if (isThirdParty || event.request.method !== 'GET') {
     return; // deja pasar a la red normalmente

@@ -15,6 +15,13 @@ service cloud.firestore {
       return valor is string && valor.size() > 0 && valor.size() <= maxLargo;
     }
 
+    // Para los contadores de personas afectadas (heridos/fallecidos/
+    // desaparecidos): siempre tienen que llegar como número entero,
+    // nunca negativo, con un tope razonable contra errores/abuso.
+    function esConteoValido(valor) {
+      return valor is int && valor >= 0 && valor <= 99999;
+    }
+
     function timestampEsDelServidor() {
       return request.resource.data.timestamp == request.time;
     }
@@ -81,6 +88,9 @@ service cloud.firestore {
         esTextoRequerido(request.resource.data.descripcion, 300) &&
         esTextoRequerido(request.resource.data.localidad, 100) &&
         esTextoOpcionalValido(request.resource.data.contacto, 120) &&
+        esConteoValido(request.resource.data.heridos) &&
+        esConteoValido(request.resource.data.fallecidos) &&
+        esConteoValido(request.resource.data.desaparecidos) &&
         request.resource.data.estado == 'activo' &&
         request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90 &&
         request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180 &&

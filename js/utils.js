@@ -161,3 +161,18 @@ export async function buscarDireccion(consulta, { cercaDe } = {}) {
     texto: r.display_name
   }));
 }
+
+export async function obtenerNombreLugar(lat, lng) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`;
+  const respuesta = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+  if (!respuesta.ok) throw new Error('No se pudo consultar el lugar.');
+  const datos = await respuesta.json();
+  const dir = datos.address || {};
+
+  const municipio = dir.city || dir.town || dir.municipality || dir.village || dir.county || 'Zona rural';
+  const departamento = dir.state || '';
+  const pais = dir.country || '';
+
+  const partes = [municipio, departamento, pais].filter(Boolean);
+  return partes.join(', ') || datos.display_name || 'Ubicación desconocida';
+}

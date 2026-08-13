@@ -16,6 +16,7 @@ const COLECCION_ID = COLECCIONES.reportes;
 let mapaLeaflet = null;
 let capaMarcadores = null;
 let marcadorBusqueda = null;
+let marcadorSismo = null;
 let ubicacionSeleccionada = null; // {lat, lng}
 let tipoSeleccionado = null;
 let itemsActuales = [];
@@ -86,16 +87,31 @@ function pintarMarcadores(items) {
       pane: item.verificado ? 'verificadosPane' : 'reportesPane'
     });
     const contacto = item.contacto ? linkContacto(item.contacto) : null;
+    const afectacionPopup = [];
+    if (item.heridos > 0) afectacionPopup.push(`🚑 ${item.heridos} herido${item.heridos === 1 ? '' : 's'}`);
+    if (item.fallecidos > 0) afectacionPopup.push(`⚰️ ${item.fallecidos} fallecido${item.fallecidos === 1 ? '' : 's'}`);
+    if (item.desaparecidos > 0) afectacionPopup.push(`❓ ${item.desaparecidos} desaparecido${item.desaparecidos === 1 ? '' : 's'}`);
+
     marcador.bindPopup(`
       <strong>${escaparHTML(etiquetaPorTipo(item.tipo))}</strong>
       ${item.verificado ? ' <span style="color:#c9960c">✅ Verificado</span>' : ''}<br>
       ${escaparHTML(item.descripcion || '')}<br>
+      ${afectacionPopup.length ? `<small>${afectacionPopup.join(' · ')}</small><br>` : ''}
       ${item.localidad ? `<small>🏘️ ${escaparHTML(item.localidad)}</small><br>` : ''}
       <small>${tiempoRelativo(item._fecha)}</small>
       ${contacto && contacto.texto ? `<br><small>Contacto: ${escaparHTML(contacto.texto)}</small>` : ''}
     `);
     marcador.addTo(capaMarcadores);
   });
+}
+
+function afectacionHTML(item) {
+  const partes = [];
+  if (item.heridos > 0) partes.push(`🚑 ${item.heridos} herido${item.heridos === 1 ? '' : 's'}`);
+  if (item.fallecidos > 0) partes.push(`⚰️ ${item.fallecidos} fallecido${item.fallecidos === 1 ? '' : 's'}`);
+  if (item.desaparecidos > 0) partes.push(`❓ ${item.desaparecidos} desaparecido${item.desaparecidos === 1 ? '' : 's'}`);
+  if (partes.length === 0) return '';
+  return `<div class="afectacion-tarjeta">${partes.join(' · ')}</div>`;
 }
 
 function tarjetaHTML(item) {
@@ -127,6 +143,7 @@ function tarjetaHTML(item) {
       ${atendido ? '<span class="etiqueta resuelto">✅ Ya atendido</span>' : ''}
       ${desactualizada ? '<span class="etiqueta alerta">⚠️ Varias personas dicen que esto podría estar desactualizado</span>' : ''}
       <p>${escaparHTML(item.descripcion || '')}</p>
+      ${afectacionHTML(item)}
       <div class="meta">
         ${item.localidad ? `<span>🏘️ ${escaparHTML(item.localidad)}</span>` : ''}
         ${typeof item.lat === 'number' ? `<span>📍 ${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}</span>` : ''}
@@ -179,9 +196,44 @@ function renderLista(items, { agregar = false } = {}) {
   }
 }
 
+function renderResumenAfectacion(items) {
+  const cont = document.getElementById('resumen-afectacion');
+  if (!cont) return;
+
+  const totales = items.reduce(
+    (acc, it) => {
+      acc.heridos += it.heridos || 0;
+      acc.fallecidos += it.fallecidos || 0;
+      acc.desaparecidos += it.desaparecidos || 0;
+      return acc;
+    },
+    { heridos: 0, fallecidos: 0, desaparecidos: 0 }
+  );
+
+  const total = totales.heridos + totales.fallecidos + totales.desaparecidos;
+  if (total === 0) {
+    cont.hidden = true;
+    cont.innerHTML = '';
+    return;
+  }
+
+  cont.hidden = false;
+  cont.innerHTML = `
+    <strong>📊 Personas afectadas reportadas (en lo que ves ahora):</strong>
+    <div class="resumen-afectacion-numeros">
+      <span>🚑 ${totales.heridos} herido${totales.heridos === 1 ? '' : 's'}</span>
+      <span>⚰️ ${totales.fallecidos} fallecido${totales.fallecidos === 1 ? '' : 's'}</span>
+      <span>❓ ${totales.desaparecidos} desaparecido${totales.desaparecidos === 1 ? '' : 's'}</span>
+    </div>
+    <p class="resumen-afectacion-nota">Suma de los reportes visibles con este filtro — son datos que la comunidad reporta, no una cifra oficial.</p>
+  `;
+}
+
 function refiltrarTodo() {
+  const visibles = itemsVisibles(itemsActuales);
   renderLista(itemsActuales);
-  pintarMarcadores(itemsVisibles(itemsActuales));
+  pintarMarcadores(visibles);
+  renderResumenAfectacion(visibles);
 }
 
 export function iniciarListaYRealtime() {
@@ -223,7 +275,9 @@ export function iniciarListaYRealtime() {
     const { items, hayMas } = await controlador.cargarSiguientePagina();
     itemsActuales = itemsActuales.concat(items);
     renderLista(items, { agregar: true });
-    pintarMarcadores(itemsVisibles(itemsActuales));
+    const visibles = itemsVisibles(itemsActuales);
+    pintarMarcadores(visibles);
+    renderResumenAfectacion(visibles);
     e.target.disabled = false;
     e.target.textContent = 'Cargar más';
     e.target.hidden = !hayMas;
@@ -445,6 +499,27 @@ export function iniciarFormularioReporte() {
       return;
     }
 
+    const camposAfectacion = [
+      { id: 'heridos-reporte', etiqueta: 'Heridos' },
+      { id: 'fallecidos-reporte', etiqueta: 'Fallecidos' },
+      { id: 'desaparecidos-reporte', etiqueta: 'Desaparecidos' }
+    ];
+    const afectacion = {};
+    for (const campo of camposAfectacion) {
+      const valorCrudo = document.getElementById(campo.id).value.trim();
+      if (valorCrudo === '') {
+        afectacion[campo.id] = 0;
+        continue;
+      }
+      const numero = Number(valorCrudo);
+      if (!Number.isInteger(numero) || numero < 0 || numero > 99999) {
+        msg.textContent = `"${campo.etiqueta}" debe ser un número entero de 0 en adelante.`;
+        msg.classList.add('error');
+        return;
+      }
+      afectacion[campo.id] = numero;
+    }
+
     const cooldown = puedeEnviar('reporte');
     if (!cooldown.ok) {
       msg.textContent = `Espera ${cooldown.segundosRestantes}s antes de enviar otro reporte.`;
@@ -463,6 +538,9 @@ export function iniciarFormularioReporte() {
           descripcion,
           localidad,
           contacto,
+          heridos: afectacion['heridos-reporte'],
+          fallecidos: afectacion['fallecidos-reporte'],
+          desaparecidos: afectacion['desaparecidos-reporte'],
           lat: ubicacionSeleccionada.lat,
           lng: ubicacionSeleccionada.lng,
           estado: 'activo'
@@ -494,4 +572,30 @@ export function iniciarFormularioReporte() {
 
 export function refrescarTamanoMapa() {
   if (mapaLeaflet) setTimeout(() => mapaLeaflet.invalidateSize(), 200);
+}
+
+export function marcarSismoEnMapa({ lat, lng, popupHtml, zoom = 9 }) {
+  if (!mapaLeaflet) return;
+
+  if (marcadorSismo) {
+    mapaLeaflet.removeLayer(marcadorSismo);
+    marcadorSismo = null;
+  }
+
+  const icono = L.divIcon({
+    className: 'icono-sismo',
+    html: '<span class="pulso-sismo"></span><span class="punto-sismo">🌐</span>',
+    iconSize: [34, 34],
+    iconAnchor: [17, 17]
+  });
+
+  marcadorSismo = L.marker([lat, lng], { icon: icono, zIndexOffset: 1000 }).addTo(mapaLeaflet);
+  if (popupHtml) marcadorSismo.bindPopup(popupHtml);
+
+  mapaLeaflet.setView([lat, lng], zoom);
+}
+
+export function irAVistaMapa() {
+  const boton = document.querySelector('nav.tabs button[data-vista="vista-mapa"]');
+  if (boton) boton.click();
 }

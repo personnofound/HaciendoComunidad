@@ -41,6 +41,8 @@
   </div>
 </header>
 
+<div id="contenedor-sismo" hidden></div>
+
 <div id="contenedor-avisos" hidden></div>
 
 <nav class="tabs" aria-label="Secciones">
@@ -63,6 +65,8 @@
     <button type="button" class="btn btn-secundario" id="btn-abrir-reporte-manual" style="width:100%; margin-bottom:10px">
       📍 Reportar sin usar el mapa
     </button>
+
+    <div id="resumen-afectacion" class="resumen-afectacion" hidden></div>
 
     <div class="lista-cabecera">
       <h3>Reportes recientes</h3>
@@ -284,6 +288,24 @@
       <div class="fila">
         <label for="localidad-reporte">Localidad / barrio (obligatorio)</label>
         <input type="text" id="localidad-reporte" maxlength="100" required placeholder="Ej: San Fernando, Comuna 17…">
+      </div>
+      <div class="fila">
+        <label>Personas afectadas en el lugar (opcional)</label>
+        <p class="ayuda-campo">Solo si lo sabes con certeza. Ayuda a priorizar la respuesta en las zonas más afectadas.</p>
+        <div class="fila-numeros-afectados">
+          <div>
+            <label for="heridos-reporte" class="label-mini">🚑 Heridos</label>
+            <input type="number" id="heridos-reporte" min="0" max="99999" step="1" placeholder="0">
+          </div>
+          <div>
+            <label for="fallecidos-reporte" class="label-mini">⚰️ Fallecidos</label>
+            <input type="number" id="fallecidos-reporte" min="0" max="99999" step="1" placeholder="0">
+          </div>
+          <div>
+            <label for="desaparecidos-reporte" class="label-mini">❓ Desaparecidos</label>
+            <input type="number" id="desaparecidos-reporte" min="0" max="99999" step="1" placeholder="0">
+          </div>
+        </div>
       </div>
       <div class="fila">
         <label for="contacto-reporte">Contacto (opcional)</label>

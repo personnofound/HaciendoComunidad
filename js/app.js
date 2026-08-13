@@ -3,6 +3,7 @@ import { iniciarMapa, iniciarListaYRealtime, iniciarFormularioReporte, refrescar
 import { iniciarListaYRealtimeDesaparecidos, iniciarFormularioDesaparecidos } from './desaparecidos.js';
 import { iniciarListaYRealtimeComunidad, iniciarFormularioComunidad } from './comunidad.js';
 import { iniciarAviso } from './aviso.js';
+import { iniciarMonitorSismos } from './sismos.js';
 import { iniciarSesionGoogle, cerrarSesion, onCambioAuth, usuarioEsCuentaInstitucional } from './auth.js';
 
 // ---------- Pestañas ----------
@@ -135,6 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
   iniciarMapa();
   iniciarListaYRealtime();
   iniciarFormularioReporte();
+  iniciarMonitorSismos();
 
   iniciarListaYRealtimeDesaparecidos();
   iniciarFormularioDesaparecidos();
