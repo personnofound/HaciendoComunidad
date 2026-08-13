@@ -39,7 +39,7 @@ export const AVISOS = [
     id: 'toque-de-queda',
     titulo: '🚫🏠 Toque de queda.',
     mensaje: 'La Alcaldía de Cali decretó un nuevo toque de queda para la noche de este miércoles 12 de agosto de 2026. La medida rige desde las 9:00 p. m. hasta las 6:00 a. m. del jueves 13 de agosto, como parte de las acciones por el terremoto y la calamidad pública.',
-    link: 'https://www.infobae.com/colombia/2026/08/12/por-que-son-tan-importantes-las-primeras-72-horas-tras-un-desastre-natural-que-es-la-ventana-de-oro/',
+    link: 'https://www.facebook.com/AlcaldiaDeCali/videos/importante-se-decreta-toque-de-queda-hoy-mi%C3%A9rcoles-12-de-agosto-desde-las-900-pm/1741671197169058/',
     textoLink: '🔗 Ver el detalle oficial'
   }
 ];
