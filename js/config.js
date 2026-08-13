@@ -17,7 +17,7 @@ export const COLECCIONES = {
 
 export const TAMANO_PAGINA = 100;
 
-export const UBICACION_POR_DEFECTO = { lat: 3.4216, lng: -76.5320, zoom: 11 };
+export const UBICACION_POR_DEFECTO = { lat: 3.9916, lng: -76.5320, zoom: 8 };
 
 export const CATEGORIAS_COMUNIDAD = [
   { id: 'agua', etiqueta: 'Agua' },
