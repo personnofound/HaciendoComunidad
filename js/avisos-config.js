@@ -22,10 +22,17 @@ export const AVISOS = [
     textoLink: '🔗 Ver el detalle oficial'
   },
   {
-    id: 'adres-comunicado.terremoto',
-    titulo: '🚗 ADRES: Comunicado de interés para las víctimas del terremoto.',
+    id: 'adres-comunicado-terremoto',
+    titulo: '🏥 ADRES: Comunicado de interés para las víctimas del terremoto.',
     mensaje: 'El ADRES reconocerá el pago de indemnizaciones y gastos funerarios para las víctimas mortales de catástrofes y/o eventos naturales. Así como el pago de servicios de salud prestados a las víctimas de estos eventos.',
     link: 'https://share.google/dZMg7HqRKzdlSiVjk',
+    textoLink: '🔗 Ver el detalle oficial'
+  },
+  {
+    id: 'ventana-terremoto',
+    titulo: '🔕 Hoy se cumplen las 72 horas de la ventana de oro.',
+    mensaje: 'Las 72 horas son el tiempo más crítico (la "ventana de oro") después de un terremoto para rescatar a personas con vida bajo los escombros. Recuerda hacer silencio para que los rescatistas puedan escuchar a los sobrevivientes.',
+    link: 'https://www.infobae.com/colombia/2026/08/12/por-que-son-tan-importantes-las-primeras-72-horas-tras-un-desastre-natural-que-es-la-ventana-de-oro/',
     textoLink: '🔗 Ver el detalle oficial'
   }
 ];

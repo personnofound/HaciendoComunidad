@@ -29,7 +29,16 @@
     <span class="dot" aria-hidden="true"></span>
     <h1>Haciendo Comunidad<small>Ayuda por terremoto · sin registro · tiempo real</small></h1>
   </div>
-  <span id="estado-conexion">Conectando…</span>
+  <div class="acciones-header">
+    <span id="estado-conexion">Conectando…</span>
+    <button type="button" id="btn-login-admin" class="btn-auth" title="Acceso autorizado">
+      🔐 Personal Autorizado
+    </button>
+    <span id="sesion-admin" class="sesion-admin" hidden>
+      <span id="sesion-email-corto"></span>
+      <button type="button" id="btn-logout-admin" title="Cerrar sesión">✕</button>
+    </span>
+  </div>
 </header>
 
 <div id="contenedor-avisos" hidden></div>
@@ -65,10 +74,18 @@
       <button type="button" class="limpiar" id="limpiar-filtro-reportes" hidden aria-label="Quitar filtro">✕</button>
       <button type="button" class="btn-gps" id="gps-filtro-reportes" title="Usar mi ubicación">📡</button>
     </div>
+    <!-- <label class="toggle-mostrar-todo toggle-verificados">
+      <input type="checkbox" id="toggle-solo-verificados-reportes">
+      ✅ Mostrar solo información verificada
+    </label> -->
     <label class="toggle-mostrar-todo">
       <input type="checkbox" id="toggle-atendidos-reportes">
       Mostrar también los ya atendidos o marcados como desactualizados
     </label>
+    <!-- <label class="toggle-mostrar-todo" id="fila-mis-reportes" hidden>
+      <input type="checkbox" id="toggle-mis-reportes">
+      Ver solo mis publicaciones
+    </label> -->
     <div id="aviso-cache-reportes" class="aviso-cache" hidden>Mostrando la última copia guardada en este dispositivo. Actualizando…</div>
     <div id="lista-reportes"></div>
     <p id="vacio-reportes" class="vacio" hidden>Todavía no hay reportes. Sé la primera persona en marcar dónde se necesita ayuda.</p>
@@ -138,10 +155,18 @@
       <button type="button" class="limpiar" id="limpiar-filtro-desaparecidos" hidden aria-label="Quitar filtro">✕</button>
       <button type="button" class="btn-gps" id="gps-filtro-desaparecidos" title="Usar mi ubicación">📡</button>
     </div>
+    <!-- <label class="toggle-mostrar-todo toggle-verificados">
+      <input type="checkbox" id="toggle-solo-verificados-desaparecidos">
+      ✅ Mostrar solo información verificada
+    </label> -->
     <label class="toggle-mostrar-todo">
       <input type="checkbox" id="toggle-encontrados-desaparecidos">
       <span id="toggle-encontrados-desaparecidos-texto">Mostrar también los ya encontrados o marcados como desactualizados</span>
     </label>
+    <!-- <label class="toggle-mostrar-todo" id="fila-mis-desaparecidos" hidden>
+      <input type="checkbox" id="toggle-mis-desaparecidos">
+      Ver solo mis publicaciones
+    </label> -->
     <div id="aviso-cache-desaparecidos" class="aviso-cache" hidden>Mostrando la última copia guardada en este dispositivo. Actualizando…</div>
     <div id="lista-desaparecidos"></div>
     <p id="vacio-desaparecidos" class="vacio" hidden>Aún no hay publicaciones en esta categoría.</p>
@@ -204,10 +229,18 @@
       <button type="button" class="limpiar" id="limpiar-filtro-zona-comunidad" hidden aria-label="Quitar filtro">✕</button>
       <button type="button" class="btn-gps" id="gps-filtro-comunidad" title="Usar mi ubicación">📡</button>
     </div>
+    <!-- <label class="toggle-mostrar-todo toggle-verificados">
+      <input type="checkbox" id="toggle-solo-verificados-comunidad">
+      ✅ Mostrar solo información verificada
+    </label> -->
     <label class="toggle-mostrar-todo">
       <input type="checkbox" id="toggle-cubiertos-comunidad">
       Mostrar también las cubiertas/completas o marcadas como desactualizadas
     </label>
+    <!-- <label class="toggle-mostrar-todo" id="fila-mis-comunidad" hidden>
+      <input type="checkbox" id="toggle-mis-comunidad">
+      Ver solo mis publicaciones
+    </label> -->
     <div id="aviso-cache-comunidad" class="aviso-cache" hidden>Mostrando la última copia guardada en este dispositivo. Actualizando…</div>
     <div id="lista-comunidad"></div>
     <p id="vacio-comunidad" class="vacio" hidden>Todavía no hay publicaciones. ¡Sé la primera persona en pedir u ofrecer ayuda!</p>

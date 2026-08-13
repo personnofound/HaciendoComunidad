@@ -7,6 +7,7 @@ import {
   obtenerUbicacionPorGPS
 } from './utils.js';
 import { validarFoto, subirFoto } from './fotos.js';
+import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
 
 const controlador = crearControladorDatos(COLECCIONES.desaparecidos);
 const COLECCION_ID = COLECCIONES.desaparecidos;
@@ -15,6 +16,8 @@ let modoActivo = 'busco'; // busco | encontre
 let filtroTipoSujeto = 'todos'; // todos | persona | mascota
 let filtroLocalidad = '';
 let mostrarResueltos = false;
+let soloMisPublicaciones = false;
+let soloVerificados = false;
 let itemsActuales = [];
 
 const TEXTOS_MODO = {
@@ -60,11 +63,12 @@ function tarjetaHTML(item) {
   }
 
   return `
-    <article class="tarjeta ${resuelto ? 'esta-resuelta' : ''}" data-tipo-sujeto="${escaparHTML(item.tipoSujeto || 'persona')}">
+    <article class="tarjeta ${resuelto ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}" data-tipo-sujeto="${escaparHTML(item.tipoSujeto || 'persona')}">
       <div class="fila-top">
         <span class="etiqueta ${esPersona ? 'urgente' : 'info'}">${esPersona ? '🧍 Persona' : '🐾 Mascota'}</span>
         <span class="meta">${tiempoRelativo(item._fecha)}</span>
       </div>
+      ${item.verificado ? '<span class="etiqueta verificado">✅ Fuente verificada</span>' : ''}
       ${resuelto ? `<span class="etiqueta resuelto">${textos.etiquetaResuelto}</span>` : ''}
       ${desactualizada ? '<span class="etiqueta alerta">⚠️ Varias personas dicen que esto podría estar desactualizado</span>' : ''}
       ${item.fotoUrl ? `<img class="foto-tarjeta" src="${escaparHTML(item.fotoUrl)}" alt="Foto de ${escaparHTML(item.nombre || 'la publicación')}" loading="lazy">` : ''}
@@ -89,7 +93,10 @@ function itemsFiltrados(items) {
     const pasaLocalidad = !filtroLocalidad || String(it.localidad || '').toLowerCase().includes(filtroLocalidad);
     const desactualizada = (it.marcasDesactualizado || 0) >= UMBRAL_DESACTUALIZADO;
     const pasaEstado = mostrarResueltos || (!estadoResuelto(it) && !desactualizada);
-    return pasaModo && pasaTipo && pasaLocalidad && pasaEstado;
+    const usuario = obtenerUsuarioActual();
+    const pasaAutor = !soloMisPublicaciones || !!(usuario && it.autorEmail && it.autorEmail === usuario.email);
+    const pasaVerificado = !soloVerificados || !!it.verificado;
+    return pasaModo && pasaTipo && pasaLocalidad && pasaEstado && pasaAutor && pasaVerificado;
   });
 }
 
@@ -208,9 +215,29 @@ export function iniciarListaYRealtimeDesaparecidos() {
     }
   });
 
+  // document.getElementById('toggle-solo-verificados-desaparecidos').addEventListener('change', (e) => {
+  //   soloVerificados = e.target.checked;
+  //   renderLista(itemsActuales);
+  // });
+
   document.getElementById('toggle-encontrados-desaparecidos').addEventListener('change', (e) => {
     mostrarResueltos = e.target.checked;
     renderLista(itemsActuales);
+  });
+
+  const filaMisPublicaciones = document.getElementById('fila-mis-desaparecidos');
+  // const toggleMisPublicaciones = document.getElementById('toggle-mis-desaparecidos');
+  // toggleMisPublicaciones.addEventListener('change', (e) => {
+  //   soloMisPublicaciones = e.target.checked;
+  //   renderLista(itemsActuales);
+  // });
+  document.addEventListener('auth-cambio', (e) => {
+    filaMisPublicaciones.hidden = !e.detail.usuario;
+    if (!e.detail.usuario) {
+      soloMisPublicaciones = false;
+      // toggleMisPublicaciones.checked = false;
+      renderLista(itemsActuales);
+    }
   });
 
   document.getElementById('btn-cargar-mas-desaparecidos').addEventListener('click', async (e) => {
@@ -305,17 +332,24 @@ export function iniciarFormularioDesaparecidos() {
       }
       btn.textContent = 'Publicando…';
       const estadoInicial = modoActivo === 'busco' ? 'buscando' : 'disponible';
-      const ref = await controlador.crear({
-        modo: modoActivo,
-        tipoSujeto,
-        nombre,
-        descripcion,
-        localidad,
-        ultimaUbicacion,
-        contacto,
-        fotoUrl,
-        estado: estadoInicial
-      });
+      const usuario = obtenerUsuarioActual();
+      const ref = await controlador.crearConAutoria(
+        {
+          modo: modoActivo,
+          tipoSujeto,
+          nombre,
+          descripcion,
+          localidad,
+          ultimaUbicacion,
+          contacto,
+          fotoUrl,
+          estado: estadoInicial
+        },
+        {
+          intentarVerificado: usuarioEsCuentaInstitucional(),
+          correoUsuario: usuario ? usuario.email : null
+        }
+      );
       recordarPublicacionPropia(COLECCION_ID, ref.id);
       marcarEnviado('desaparecido');
       msg.textContent = 'Publicado. La comunidad ya puede verlo.';

@@ -112,6 +112,17 @@ export function crearControladorDatos(nombreColeccion) {
     });
   }
 
+  async function crearConAutoria(datosBase, { intentarVerificado, correoUsuario }) {
+    if (intentarVerificado && correoUsuario) {
+      try {
+        return await crear({ ...datosBase, verificado: true, autorEmail: correoUsuario });
+      } catch (err) {
+        console.warn('No se pudo publicar como verificado (¿correo fuera de la whitelist?), reintentando sin verificar.', err);
+      }
+    }
+    return crear({ ...datosBase, verificado: false, autorEmail: null });
+  }
+
   /**
    * Cambia el campo "estado" de un documento (ej. activo → atendido,
    * buscando → encontrado, abierto → cubierto). Las reglas de Firestore
@@ -144,6 +155,7 @@ export function crearControladorDatos(nombreColeccion) {
     detenerEscucha,
     cargarSiguientePagina,
     crear,
+    crearConAutoria,
     marcarEstado,
     reportarDesactualizado,
     reportarAbuso

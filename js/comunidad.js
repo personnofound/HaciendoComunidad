@@ -6,6 +6,7 @@ import {
   esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada,
   obtenerUbicacionPorGPS
 } from './utils.js';
+import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
 
 const controlador = crearControladorDatos(COLECCIONES.comunidad);
 let itemsActuales = [];
@@ -13,6 +14,8 @@ let filtroTipoPublicacion = 'todos'; // todos | peticion | oferta
 let filtroCategoria = 'todas';
 let filtroZona = '';
 let mostrarCubiertos = false;
+let soloMisPublicaciones = false;
+let soloVerificados = false;
 const COLECCION_ID = COLECCIONES.comunidad;
 
 function etiquetaCategoria(id) {
@@ -37,13 +40,14 @@ function tarjetaHTML(item) {
   }
 
   return `
-    <article class="tarjeta ${cubierto ? 'esta-resuelta' : ''}">
+    <article class="tarjeta ${cubierto ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}">
       <div class="fila-top">
         <span class="etiqueta ${esPeticion ? 'peticion' : 'oferta'}">
           ${esPeticion ? '🙋 Necesito' : '🤝 Puedo ofrecer'}
         </span>
         <span class="meta">${tiempoRelativo(item._fecha)}</span>
       </div>
+      ${item.verificado ? '<span class="etiqueta verificado">✅ Fuente verificada</span>' : ''}
       ${cubierto ? `<span class="etiqueta resuelto">✅ ${esPeticion ? 'Ya está cubierto' : 'Ya no disponible'}</span>` : ''}
       ${desactualizada ? '<span class="etiqueta alerta">⚠️ Varias personas dicen que esto podría estar desactualizado</span>' : ''}
       <p><strong>${escaparHTML(item.servicio || '')}</strong></p>
@@ -67,7 +71,10 @@ function itemsFiltrados(items) {
     const pasaZona = !filtroZona || String(it.zona || '').toLowerCase().includes(filtroZona);
     const desactualizada = (it.marcasDesactualizado || 0) >= UMBRAL_DESACTUALIZADO;
     const pasaEstado = mostrarCubiertos || (it.estado !== 'cubierto' && !desactualizada);
-    return pasaTipo && pasaCategoria && pasaZona && pasaEstado;
+    const usuario = obtenerUsuarioActual();
+    const pasaAutor = !soloMisPublicaciones || !!(usuario && it.autorEmail && it.autorEmail === usuario.email);
+    const pasaVerificado = !soloVerificados || !!it.verificado;
+    return pasaTipo && pasaCategoria && pasaZona && pasaEstado && pasaAutor && pasaVerificado;
   });
 }
 
@@ -178,9 +185,29 @@ export function iniciarListaYRealtimeComunidad() {
     }
   });
 
+  // document.getElementById('toggle-solo-verificados-comunidad').addEventListener('change', (e) => {
+  //   soloVerificados = e.target.checked;
+  //   renderLista(itemsActuales);
+  // });
+
   document.getElementById('toggle-cubiertos-comunidad').addEventListener('change', (e) => {
     mostrarCubiertos = e.target.checked;
     renderLista(itemsActuales);
+  });
+
+  const filaMisPublicaciones = document.getElementById('fila-mis-comunidad');
+  // const toggleMisPublicaciones = document.getElementById('toggle-mis-comunidad');
+  // toggleMisPublicaciones.addEventListener('change', (e) => {
+  //   soloMisPublicaciones = e.target.checked;
+  //   renderLista(itemsActuales);
+  // });
+  document.addEventListener('auth-cambio', (e) => {
+    filaMisPublicaciones.hidden = !e.detail.usuario;
+    if (!e.detail.usuario) {
+      soloMisPublicaciones = false;
+      // toggleMisPublicaciones.checked = false;
+      renderLista(itemsActuales);
+    }
   });
 }
 
@@ -250,15 +277,22 @@ export function iniciarFormularioComunidad() {
     btn.disabled = true;
     btn.textContent = 'Publicando…';
     try {
-      const ref = await controlador.crear({
-        tipoPublicacion,
-        categoria: categoriaSeleccionada,
-        servicio,
-        descripcion,
-        zona,
-        contacto,
-        estado: 'abierto'
-      });
+      const usuario = obtenerUsuarioActual();
+      const ref = await controlador.crearConAutoria(
+        {
+          tipoPublicacion,
+          categoria: categoriaSeleccionada,
+          servicio,
+          descripcion,
+          zona,
+          contacto,
+          estado: 'abierto'
+        },
+        {
+          intentarVerificado: usuarioEsCuentaInstitucional(),
+          correoUsuario: usuario ? usuario.email : null
+        }
+      );
       recordarPublicacionPropia(COLECCION_ID, ref.id);
       marcarEnviado('comunidad');
       msg.textContent = 'Publicado. Gracias por sumarte a la comunidad.';

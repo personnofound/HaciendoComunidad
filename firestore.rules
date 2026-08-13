@@ -33,6 +33,40 @@ service cloud.firestore {
       request.resource.data.reportesAbuso == resource.data.reportesAbuso + 1;
   }
 
+  // Personal administrativo/verificado: tiene que haber iniciado sesión
+  // con Google, ser del dominio institucional, Y tener un documento propio
+  // en la colección admins_permitidos (un documento por correo autorizado,
+  // usando el correo como ID; el contenido no importa, solo que exista).
+  //
+  // Esa whitelist NO vive en este archivo a propósito: firestore.rules se
+  // sube a un repositorio público. El exists() de abajo consulta esa
+  // colección internamente para evaluar la regla — eso funciona SIEMPRE,
+  // sin importar la restricción de lectura que tiene esa colección más
+  // abajo (esa restricción es para el navegador, no para las reglas mismas).
+  function esCorreoAdminPermitido() {
+    return request.auth != null &&
+      request.auth.token.email != null &&
+      request.auth.token.email.lower().matches('^[^@]+@correounivalle[.]edu[.]co$') &&
+      exists(/databases/$(database)/documents/admins_permitidos/$(request.auth.token.email.lower()));
+  }
+
+  // Exige que el campo "verificado"/"autorEmail" que llega en la creación
+  // coincida de verdad con quién está autenticado: si es admin permitido,
+  // solo puede marcarse verificado=true con SU PROPIO correo; si no, tiene
+  // que mandar verificado=false y autorEmail=null. Así nadie puede
+  // falsificar el sello de "fuente verificada" ni hacerse pasar por otra
+  // cuenta, sin importar qué mande el navegador.
+  function autoriaValida() {
+    return (
+      esCorreoAdminPermitido() &&
+      request.resource.data.verificado == true &&
+      request.resource.data.autorEmail == request.auth.token.email
+    ) || (
+      request.resource.data.verificado == false &&
+      request.resource.data.autorEmail == null
+    );
+  }
+
   match /databases/{database}/documents {
 
     // -------------------- Reportes de ayuda (mapa) --------------------
@@ -48,7 +82,8 @@ service cloud.firestore {
         request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90 &&
         request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180 &&
         request.resource.data.reportesAbuso == 0 &&
-        request.resource.data.marcasDesactualizado == 0;
+        request.resource.data.marcasDesactualizado == 0 &&
+        autoriaValida();
 
       allow update: if (
         soloCambioDeCampo('estado') &&
@@ -78,7 +113,8 @@ service cloud.firestore {
           ? request.resource.data.estado == 'buscando'
           : request.resource.data.estado == 'disponible') &&
         request.resource.data.reportesAbuso == 0 &&
-        request.resource.data.marcasDesactualizado == 0;
+        request.resource.data.marcasDesactualizado == 0 &&
+        autoriaValida();
 
       allow update: if (
         soloCambioDeCampo('estado') && (
@@ -103,7 +139,8 @@ service cloud.firestore {
         esTextoRequerido(request.resource.data.contacto, 120) &&
         request.resource.data.estado == 'abierto' &&
         request.resource.data.reportesAbuso == 0 &&
-        request.resource.data.marcasDesactualizado == 0;
+        request.resource.data.marcasDesactualizado == 0 &&
+        autoriaValida();
 
       allow update: if (
         soloCambioDeCampo('estado') &&
@@ -112,6 +149,15 @@ service cloud.firestore {
       ) || esVotoDesactualizado() || esVotoAbuso();
 
       allow delete: if false;
+    }
+
+    // -------------------- Whitelist de administradores --------------------
+    match /admins_permitidos/{correo} {
+      allow get: if request.auth != null &&
+        request.auth.token.email != null &&
+        request.auth.token.email.lower() == correo;
+      allow list: if false;
+      allow write: if false;
     }
 
     // Cualquier otra colección no listada arriba queda bloqueada por defecto.

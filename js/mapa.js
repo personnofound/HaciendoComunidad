@@ -6,6 +6,7 @@ import {
   esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada,
   obtenerUbicacionPorGPS, buscarDireccion
 } from './utils.js';
+import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
 
 export { TIPOS_AYUDA };
 
@@ -21,6 +22,8 @@ let itemsActuales = [];
 let filtroLocalidad = '';
 let filtroTipo = 'todos';
 let mostrarAtendidos = false;
+let soloMisPublicaciones = false;
+let soloVerificados = false;
 
 function colorPorTipo(id) {
   return (TIPOS_AYUDA.find((t) => t.id === id) || TIPOS_AYUDA[TIPOS_AYUDA.length - 1]).color;
@@ -67,16 +70,28 @@ function pintarMarcadores(items) {
   capaMarcadores.clearLayers();
   items.forEach((item) => {
     if (typeof item.lat !== 'number' || typeof item.lng !== 'number') return;
+
+    if (item.verificado) {
+      L.circleMarker([item.lat, item.lng], {
+        radius: 13,
+        color: '#f5c518',
+        weight: 3,
+        fillOpacity: 0,
+        interactive: false
+      }).addTo(capaMarcadores);
+    }
+
     const marcador = L.circleMarker([item.lat, item.lng], {
       radius: 9,
-      color: '#0f1720',
-      weight: 2,
+      color: item.verificado ? '#f5c518' : '#0f1720',
+      weight: item.verificado ? 2.5 : 2,
       fillColor: colorPorTipo(item.tipo),
       fillOpacity: 0.9
     });
     const contacto = item.contacto ? linkContacto(item.contacto) : null;
     marcador.bindPopup(`
-      <strong>${escaparHTML(etiquetaPorTipo(item.tipo))}</strong><br>
+      <strong>${escaparHTML(etiquetaPorTipo(item.tipo))}</strong>
+      ${item.verificado ? ' <span style="color:#c9960c">✅ Verificado</span>' : ''}<br>
       ${escaparHTML(item.descripcion || '')}<br>
       ${item.localidad ? `<small>🏘️ ${escaparHTML(item.localidad)}</small><br>` : ''}
       <small>${tiempoRelativo(item._fecha)}</small>
@@ -106,11 +121,12 @@ function tarjetaHTML(item) {
   }
 
   return `
-    <article class="tarjeta ${atendido ? 'esta-resuelta' : ''}">
+    <article class="tarjeta ${atendido ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}">
       <div class="fila-top">
         <span class="etiqueta urgente">${escaparHTML(etiquetaPorTipo(item.tipo))}</span>
         <span class="meta">${tiempoRelativo(item._fecha)}</span>
       </div>
+      ${item.verificado ? '<span class="etiqueta verificado">✅ Fuente verificada</span>' : ''}
       ${atendido ? '<span class="etiqueta resuelto">✅ Ya atendido</span>' : ''}
       ${desactualizada ? '<span class="etiqueta alerta">⚠️ Varias personas dicen que esto podría estar desactualizado</span>' : ''}
       <p>${escaparHTML(item.descripcion || '')}</p>
@@ -133,12 +149,20 @@ function coincideLocalidad(item) {
 function coincideTipo(item) {
   return filtroTipo === 'todos' || item.tipo === filtroTipo;
 }
+function coincideAutor(item) {
+  if (!soloMisPublicaciones) return true;
+  const usuario = obtenerUsuarioActual();
+  return !!(usuario && item.autorEmail && item.autorEmail === usuario.email);
+}
+function coincideVerificado(item) {
+  return !soloVerificados || !!item.verificado;
+}
 
 function itemsVisibles(items) {
   return items.filter((item) => {
     const desactualizada = (item.marcasDesactualizado || 0) >= UMBRAL_DESACTUALIZADO;
     const pasaEstado = mostrarAtendidos || (item.estado !== 'atendido' && !desactualizada);
-    return coincideLocalidad(item) && coincideTipo(item) && pasaEstado;
+    return coincideLocalidad(item) && coincideTipo(item) && coincideAutor(item) && coincideVerificado(item) && pasaEstado;
   });
 }
 
@@ -257,6 +281,26 @@ export function iniciarListaYRealtime() {
   document.getElementById('toggle-atendidos-reportes').addEventListener('change', (e) => {
     mostrarAtendidos = e.target.checked;
     refiltrarTodo();
+  });
+
+  // document.getElementById('toggle-solo-verificados-reportes').addEventListener('change', (e) => {
+  //   soloVerificados = e.target.checked;
+  //   refiltrarTodo();
+  // });
+
+  const filaMisReportes = document.getElementById('fila-mis-reportes');
+  // const toggleMisReportes = document.getElementById('toggle-mis-reportes');
+  // toggleMisReportes.addEventListener('change', (e) => {
+  //   soloMisPublicaciones = e.target.checked;
+  //   refiltrarTodo();
+  // });
+  document.addEventListener('auth-cambio', (e) => {
+    filaMisReportes.hidden = !e.detail.usuario;
+    if (!e.detail.usuario) {
+      soloMisPublicaciones = false;
+      // toggleMisReportes.checked = false;
+      refiltrarTodo();
+    }
   });
 }
 
@@ -415,15 +459,22 @@ export function iniciarFormularioReporte() {
     btn.disabled = true;
     btn.textContent = 'Enviando…';
     try {
-      const ref = await controlador.crear({
-        tipo: tipoSeleccionado,
-        descripcion,
-        localidad,
-        contacto,
-        lat: ubicacionSeleccionada.lat,
-        lng: ubicacionSeleccionada.lng,
-        estado: 'activo'
-      });
+      const usuario = obtenerUsuarioActual();
+      const ref = await controlador.crearConAutoria(
+        {
+          tipo: tipoSeleccionado,
+          descripcion,
+          localidad,
+          contacto,
+          lat: ubicacionSeleccionada.lat,
+          lng: ubicacionSeleccionada.lng,
+          estado: 'activo'
+        },
+        {
+          intentarVerificado: usuarioEsCuentaInstitucional(),
+          correoUsuario: usuario ? usuario.email : null
+        }
+      );
       recordarPublicacionPropia(COLECCION_ID, ref.id);
       marcarEnviado('reporte');
       msg.textContent = 'Reporte enviado. ¡Gracias, aparecerá en el mapa en segundos!';

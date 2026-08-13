@@ -34,8 +34,8 @@ export const CATEGORIAS_COMUNIDAD = [
 export const TIPOS_AYUDA = [
   { id: 'medica', etiqueta: 'Médica', color: '#c0392b' },
   { id: 'rescate', etiqueta: 'Atrapados / Rescate', color: '#e05a45' },
-  { id: 'agua', etiqueta: 'Agua', color: '#3b82c4' },
-  { id: 'alimentos', etiqueta: 'Alimentos', color: '#d9a441' },
+  { id: 'agua', etiqueta: 'Servicios Públicos', color: '#3b82c4' },
+  { id: 'alimentos', etiqueta: 'Punto de Acopio', color: '#d9a441' },
   { id: 'refugio', etiqueta: 'Refugio / Techo', color: '#8e6fce' },
   { id: 'colapso', etiqueta: 'Colapso de Infraestructura', color: '#27ae60' },
   { id: 'via', etiqueta: 'Vía Cerrada', color: '#e67e22' },
@@ -48,3 +48,5 @@ export const UMBRAL_DESACTUALIZADO = 15;
 
 export const TAMANO_MAX_FOTO_MB = 5;
 export const TAMANO_MAX_FOTO_BYTES = TAMANO_MAX_FOTO_MB * 1024 * 1024;
+
+export const DOMINIO_ADMIN = 'correounivalle.edu.co';

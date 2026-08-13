@@ -3,6 +3,7 @@ import { iniciarMapa, iniciarListaYRealtime, iniciarFormularioReporte, refrescar
 import { iniciarListaYRealtimeDesaparecidos, iniciarFormularioDesaparecidos } from './desaparecidos.js';
 import { iniciarListaYRealtimeComunidad, iniciarFormularioComunidad } from './comunidad.js';
 import { iniciarAviso } from './aviso.js';
+import { iniciarSesionGoogle, cerrarSesion, onCambioAuth, usuarioEsCuentaInstitucional } from './auth.js';
 
 // ---------- Pestañas ----------
 function iniciarTabs() {
@@ -89,6 +90,39 @@ function registrarServiceWorker() {
   }
 }
 
+// ---------- Sesión institucional (opcional) ----------
+function iniciarPanelAuth() {
+  const btnLogin = document.getElementById('btn-login-admin');
+  const sesionAdmin = document.getElementById('sesion-admin');
+  const emailCorto = document.getElementById('sesion-email-corto');
+  const btnLogout = document.getElementById('btn-logout-admin');
+
+  btnLogin.addEventListener('click', async () => {
+    btnLogin.disabled = true;
+    try {
+      await iniciarSesionGoogle();
+    } catch (err) {
+    } finally {
+      btnLogin.disabled = false;
+    }
+  });
+
+  btnLogout.addEventListener('click', () => cerrarSesion());
+
+  onCambioAuth((usuario) => {
+    const esCuentaInstitucional = usuarioEsCuentaInstitucional();
+    btnLogin.hidden = !!usuario;
+    sesionAdmin.hidden = !usuario;
+    if (usuario) {
+      emailCorto.textContent = usuario.email;
+      emailCorto.title = esCuentaInstitucional
+        ? 'Tu correo está en la lista de administradores, tus próximas publicaciones saldrán marcadas como verificadas.'
+        : 'Esta cuenta no está autorizada.';
+    }
+    document.dispatchEvent(new CustomEvent('auth-cambio', { detail: { usuario, esCuentaInstitucional } }));
+  });
+}
+
 // ---------- Arranque ----------
 document.addEventListener('DOMContentLoaded', () => {
   iniciarTabs();
@@ -96,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
   iniciarInstalacionPWA();
   registrarServiceWorker();
   iniciarAviso();
+  iniciarPanelAuth();
 
   iniciarMapa();
   iniciarListaYRealtime();

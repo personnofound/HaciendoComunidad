@@ -1,6 +1,6 @@
 // service-worker.js
 
-const CACHE_NAME = 'haciendo-comunidad-shell-v8';
+const CACHE_NAME = 'haciendo-comunidad-shell-v11';
 
 const SHELL_FILES = [
   './',
@@ -13,6 +13,7 @@ const SHELL_FILES = [
   './js/fotos.js',
   './js/avisos-config.js',
   './js/aviso.js',
+  './js/auth.js',
   './js/datos.js',
   './js/mapa.js',
   './js/desaparecidos.js',
