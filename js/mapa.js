@@ -42,6 +42,12 @@ export function iniciarMapa({
   // de ubicación, se recentra automáticamente en su posición real.
   mapaLeaflet = L.map('mapa', { zoomControl: true }).setView(centroInicial, zoomInicial);
 
+  mapaLeaflet.createPane('reportesPane');
+  mapaLeaflet.getPane('reportesPane').style.zIndex = 450;
+
+  mapaLeaflet.createPane('verificadosPane');
+  mapaLeaflet.getPane('verificadosPane').style.zIndex = 650;
+
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -71,22 +77,13 @@ function pintarMarcadores(items) {
   items.forEach((item) => {
     if (typeof item.lat !== 'number' || typeof item.lng !== 'number') return;
 
-    if (item.verificado) {
-      L.circleMarker([item.lat, item.lng], {
-        radius: 13,
-        color: '#f5c518',
-        weight: 3,
-        fillOpacity: 0,
-        interactive: false
-      }).addTo(capaMarcadores);
-    }
-
     const marcador = L.circleMarker([item.lat, item.lng], {
       radius: 9,
       color: item.verificado ? '#f5c518' : '#0f1720',
       weight: item.verificado ? 2.5 : 2,
       fillColor: colorPorTipo(item.tipo),
-      fillOpacity: 0.9
+      fillOpacity: 0.9,
+      pane: item.verificado ? 'verificadosPane' : 'reportesPane'
     });
     const contacto = item.contacto ? linkContacto(item.contacto) : null;
     marcador.bindPopup(`
