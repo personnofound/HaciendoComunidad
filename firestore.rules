@@ -1,73 +1,76 @@
 rules_version = '2';
 service cloud.firestore {
 
-  function esTextoValido(valor, maxLargo) {
-    return valor is string && valor.size() <= maxLargo;
-  }
-
-  function esTextoOpcionalValido(valor, maxLargo) {
-    return valor == null || (valor is string && valor.size() <= maxLargo);
-  }
-
-  function esTextoRequerido(valor, maxLargo) {
-    return valor is string && valor.size() > 0 && valor.size() <= maxLargo;
-  }
-
-  function timestampEsDelServidor() {
-    return request.resource.data.timestamp == request.time;
-  }
-
-  // Verifica que, comparado con el documento actual, el único campo que
-  // cambió en esta escritura sea exactamente "campo".
-  function soloCambioDeCampo(campo) {
-    return request.resource.data.diff(resource.data).affectedKeys().hasOnly([campo]);
-  }
-
-  function esVotoDesactualizado() {
-    return soloCambioDeCampo('marcasDesactualizado') &&
-      request.resource.data.marcasDesactualizado == resource.data.marcasDesactualizado + 1;
-  }
-
-  function esVotoAbuso() {
-    return soloCambioDeCampo('reportesAbuso') &&
-      request.resource.data.reportesAbuso == resource.data.reportesAbuso + 1;
-  }
-
-  // Personal administrativo/verificado: tiene que haber iniciado sesión
-  // con Google, ser del dominio institucional, Y tener un documento propio
-  // en la colección admins_permitidos (un documento por correo autorizado,
-  // usando el correo como ID; el contenido no importa, solo que exista).
-  //
-  // Esa whitelist NO vive en este archivo a propósito: firestore.rules se
-  // sube a un repositorio público. El exists() de abajo consulta esa
-  // colección internamente para evaluar la regla — eso funciona SIEMPRE,
-  // sin importar la restricción de lectura que tiene esa colección más
-  // abajo (esa restricción es para el navegador, no para las reglas mismas).
-  function esCorreoAdminPermitido() {
-    return request.auth != null &&
-      request.auth.token.email != null &&
-      request.auth.token.email.lower().matches('^[^@]+@correounivalle[.]edu[.]co$') &&
-      exists(/databases/$(database)/documents/admins_permitidos/$(request.auth.token.email.lower()));
-  }
-
-  // Exige que el campo "verificado"/"autorEmail" que llega en la creación
-  // coincida de verdad con quién está autenticado: si es admin permitido,
-  // solo puede marcarse verificado=true con SU PROPIO correo; si no, tiene
-  // que mandar verificado=false y autorEmail=null. Así nadie puede
-  // falsificar el sello de "fuente verificada" ni hacerse pasar por otra
-  // cuenta, sin importar qué mande el navegador.
-  function autoriaValida() {
-    return (
-      esCorreoAdminPermitido() &&
-      request.resource.data.verificado == true &&
-      request.resource.data.autorEmail == request.auth.token.email
-    ) || (
-      request.resource.data.verificado == false &&
-      request.resource.data.autorEmail == null
-    );
-  }
-
   match /databases/{database}/documents {
+
+    function esTextoValido(valor, maxLargo) {
+      return valor is string && valor.size() <= maxLargo;
+    }
+
+    function esTextoOpcionalValido(valor, maxLargo) {
+      return valor == null || (valor is string && valor.size() <= maxLargo);
+    }
+
+    function esTextoRequerido(valor, maxLargo) {
+      return valor is string && valor.size() > 0 && valor.size() <= maxLargo;
+    }
+
+    function timestampEsDelServidor() {
+      return request.resource.data.timestamp == request.time;
+    }
+
+    // Verifica que, comparado con el documento actual, el único campo que
+    // cambió en esta escritura sea exactamente "campo".
+    function soloCambioDeCampo(campo) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([campo]);
+    }
+
+    function esVotoDesactualizado() {
+      return soloCambioDeCampo('marcasDesactualizado') &&
+        request.resource.data.marcasDesactualizado == resource.data.marcasDesactualizado + 1;
+    }
+
+    function esVotoAbuso() {
+      return soloCambioDeCampo('reportesAbuso') &&
+        request.resource.data.reportesAbuso == resource.data.reportesAbuso + 1;
+    }
+
+    // Personal administrativo/verificado: tiene que haber iniciado sesión
+    // con Google, ser del dominio institucional, Y tener un documento propio
+    // en la colección admins_permitidos (un documento por correo autorizado,
+    // usando el correo como ID; el contenido no importa, solo que exista).
+    //
+    // Esa whitelist NO vive en este archivo a propósito: firestore.rules se
+    // sube a un repositorio público. El exists() de abajo consulta esa
+    // colección internamente para evaluar la regla — eso funciona SIEMPRE,
+    // sin importar la restricción de lectura que tiene esa colección más
+    // abajo (esa restricción es para el navegador, no para las reglas mismas).
+    //
+    // IMPORTANTE: esta función tiene que vivir DENTRO de este match, porque
+    // usa la variable "database" que solo existe acá adentro.
+    function esCorreoAdminPermitido() {
+      return request.auth != null &&
+        request.auth.token.email != null &&
+        request.auth.token.email.lower().matches('^[^@]+@correounivalle[.]edu[.]co$') &&
+        exists(/databases/$(database)/documents/admins_permitidos/$(request.auth.token.email.lower()));
+    }
+
+    // Exige que el campo "verificado"/"autorEmail" que llega en la creación
+    // coincida de verdad con quién está autenticado: si es admin permitido,
+    // solo puede marcarse verificado=true con SU PROPIO correo; si no, tiene
+    // que mandar verificado=false y autorEmail=null. Así nadie puede
+    // falsificar el sello de "fuente verificada" ni hacerse pasar por otra
+    // cuenta, sin importar qué mande el navegador.
+    function autoriaValida() {
+      return (
+        esCorreoAdminPermitido() &&
+        request.resource.data.verificado == true &&
+        request.resource.data.autorEmail == request.auth.token.email
+      ) || (
+        request.resource.data.verificado == false &&
+        request.resource.data.autorEmail == null
+      );
+    }
 
     // -------------------- Reportes de ayuda (mapa) --------------------
     match /reportes_ayuda/{docId} {
@@ -152,6 +155,15 @@ service cloud.firestore {
     }
 
     // -------------------- Whitelist de administradores --------------------
+    // Un documento por correo autorizado (ID = correo en minúsculas, ej:
+    // "juan.perez@correounivalle.edu.co"). El contenido del documento no
+    // importa, solo que exista. Se administra a mano desde Firebase
+    // Console → Firestore → Datos.
+    //
+    // Nadie puede LISTAR esta colección (no se puede ver quién más está
+    // autorizado), pero una persona autenticada SÍ puede consultar (get)
+    // el documento que coincide con SU PROPIO correo — así el login puede
+    // preguntar "¿estoy yo?" sin exponer al resto de la lista.
     match /admins_permitidos/{correo} {
       allow get: if request.auth != null &&
         request.auth.token.email != null &&
