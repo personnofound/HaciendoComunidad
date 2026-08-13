@@ -13,6 +13,16 @@ service firebase.storage {
       allow update, delete: if false;
     }
 
+    // Fotos de los reportes del mapa de ayuda.
+    match /reportes_ayuda/{archivo} {
+      allow read: if true;
+
+      allow create: if request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+
+      allow update, delete: if false;
+    }
+
     // Cualquier otra ruta queda bloqueada por defecto.
     match /{allPaths=**} {
       allow read, write: if false;

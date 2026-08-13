@@ -88,6 +88,7 @@ service cloud.firestore {
         esTextoRequerido(request.resource.data.descripcion, 300) &&
         esTextoRequerido(request.resource.data.localidad, 100) &&
         esTextoOpcionalValido(request.resource.data.contacto, 120) &&
+        esTextoOpcionalValido(request.resource.data.fotoUrl, 500) &&
         esConteoValido(request.resource.data.heridos) &&
         esConteoValido(request.resource.data.fallecidos) &&
         esConteoValido(request.resource.data.desaparecidos) &&

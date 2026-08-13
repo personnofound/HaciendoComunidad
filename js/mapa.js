@@ -7,6 +7,7 @@ import {
   obtenerUbicacionPorGPS, buscarDireccion
 } from './utils.js';
 import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
+import { validarFoto, subirFoto } from './fotos.js';
 
 export { TIPOS_AYUDA };
 
@@ -143,6 +144,7 @@ function tarjetaHTML(item) {
       ${atendido ? '<span class="etiqueta resuelto">✅ Ya atendido</span>' : ''}
       ${desactualizada ? '<span class="etiqueta alerta">⚠️ Varias personas dicen que esto podría estar desactualizado</span>' : ''}
       <p>${escaparHTML(item.descripcion || '')}</p>
+      ${item.fotoUrl ? `<img class="foto-tarjeta" src="${escaparHTML(item.fotoUrl)}" alt="Foto del reporte" loading="lazy">` : ''}
       ${afectacionHTML(item)}
       <div class="meta">
         ${item.localidad ? `<span>🏘️ ${escaparHTML(item.localidad)}</span>` : ''}
@@ -411,6 +413,21 @@ export function iniciarFormularioReporte() {
     });
   });
 
+  const inputFoto = document.getElementById('foto-reporte');
+  const msgFoto = document.getElementById('msg-foto-reporte');
+  inputFoto.addEventListener('change', () => {
+    const archivo = inputFoto.files[0];
+    const resultado = validarFoto(archivo);
+    if (!resultado.ok) {
+      msgFoto.textContent = resultado.error;
+      msgFoto.classList.add('error');
+      inputFoto.value = '';
+    } else {
+      msgFoto.textContent = archivo ? `Foto lista: ${archivo.name}` : '';
+      msgFoto.classList.remove('error');
+    }
+  });
+
   // --- Buscador de direcciones (para no depender de tocar el mapa) ---
   const inputBuscar = document.getElementById('buscar-direccion-reporte');
   const btnBuscar = document.getElementById('btn-buscar-direccion');
@@ -520,6 +537,14 @@ export function iniciarFormularioReporte() {
       afectacion[campo.id] = numero;
     }
 
+    const archivo = inputFoto.files[0] || null;
+    const validacionFoto = validarFoto(archivo);
+    if (!validacionFoto.ok) {
+      msg.textContent = validacionFoto.error;
+      msg.classList.add('error');
+      return;
+    }
+
     const cooldown = puedeEnviar('reporte');
     if (!cooldown.ok) {
       msg.textContent = `Espera ${cooldown.segundosRestantes}s antes de enviar otro reporte.`;
@@ -531,6 +556,12 @@ export function iniciarFormularioReporte() {
     btn.disabled = true;
     btn.textContent = 'Enviando…';
     try {
+      let fotoUrl = '';
+      if (archivo) {
+        btn.textContent = 'Subiendo foto…';
+        fotoUrl = await subirFoto(archivo, 'reportes_ayuda');
+        btn.textContent = 'Enviando…';
+      }
       const usuario = obtenerUsuarioActual();
       const ref = await controlador.crearConAutoria(
         {
@@ -538,6 +569,7 @@ export function iniciarFormularioReporte() {
           descripcion,
           localidad,
           contacto,
+          fotoUrl,
           heridos: afectacion['heridos-reporte'],
           fallecidos: afectacion['fallecidos-reporte'],
           desaparecidos: afectacion['desaparecidos-reporte'],
@@ -555,6 +587,7 @@ export function iniciarFormularioReporte() {
       msg.textContent = 'Reporte enviado. ¡Gracias, aparecerá en el mapa en segundos!';
       msg.classList.add('ok');
       form.reset();
+      msgFoto.textContent = '';
       chips.forEach((c) => c.setAttribute('aria-pressed', 'false'));
       tipoSeleccionado = null;
       ubicacionSeleccionada = null;
