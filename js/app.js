@@ -39,45 +39,70 @@ function iniciarEstadoConexion() {
   actualizar();
 }
 
-// ---------- Instalar como app (PWA) ----------
+function claveDismissInstalar() {
+  const hoy = new Date().toISOString().slice(0, 10);
+  return `instalar_cerrado_${hoy}`;
+}
+
 function iniciarInstalacionPWA() {
-  const franja = document.getElementById('franja-instalar');
-  const btnInstalar = document.getElementById('btn-instalar');
-  const btnCerrar = document.getElementById('btn-cerrar-instalar');
+  const cont = document.getElementById('contenedor-instalar');
+  if (!cont) return;
+
   let eventoDiferido = null;
 
   const yaEstaInstalada = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  const yaLoCerro = localStorage.getItem('instalar_cerrado') === '1';
+  const yaLoCerroHoy = localStorage.getItem(claveDismissInstalar()) === '1';
   const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
-  if (yaEstaInstalada || yaLoCerro) {
-    franja.hidden = true;
-  } else if (esIOS) {
-    document.getElementById('texto-instalar').textContent =
-      'Instala esta app: toca el botón Compartir de Safari y elige "Añadir a pantalla de inicio".';
-    btnInstalar.hidden = true;
-    franja.hidden = false;
-  } else {
-    franja.hidden = true; // se muestra solo si el navegador dispara beforeinstallprompt
+  function ocultar() {
+    cont.hidden = true;
+    cont.innerHTML = '';
+  }
+
+  function mostrar({ mensaje, conBoton }) {
+    if (yaEstaInstalada || yaLoCerroHoy) return;
+    cont.innerHTML = `
+      <div class="franja-aviso">
+        <span class="franja-aviso-icono" aria-hidden="true">📲</span>
+        <div class="franja-aviso-texto">
+          <strong>Instala la app</strong>
+          <p>${mensaje}</p>
+          ${conBoton ? '<button type="button" class="franja-sismo-btn-mapa" id="btn-instalar">Instalar ahora</button>' : ''}
+        </div>
+        <button type="button" class="btn-cerrar-aviso" id="btn-cerrar-instalar" aria-label="Cerrar aviso de instalación">✕</button>
+      </div>`;
+    cont.hidden = false;
+
+    document.getElementById('btn-cerrar-instalar').addEventListener('click', () => {
+      localStorage.setItem(claveDismissInstalar(), '1');
+      ocultar();
+    });
+
+    if (conBoton) {
+      document.getElementById('btn-instalar').addEventListener('click', async () => {
+        if (!eventoDiferido) return;
+        eventoDiferido.prompt();
+        await eventoDiferido.userChoice;
+        eventoDiferido = null;
+        ocultar();
+      });
+    }
+  }
+
+  if (!yaEstaInstalada && esIOS) {
+    mostrar({
+      mensaje: 'Toca el botón Compartir de Safari y elige "Añadir a pantalla de inicio" — así abres la app más rápido, incluso con mala señal.',
+      conBoton: false
+    });
   }
 
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     eventoDiferido = e;
-    if (!yaLoCerro) franja.hidden = false;
-  });
-
-  btnInstalar.addEventListener('click', async () => {
-    if (!eventoDiferido) return;
-    eventoDiferido.prompt();
-    await eventoDiferido.userChoice;
-    eventoDiferido = null;
-    franja.hidden = true;
-  });
-
-  btnCerrar.addEventListener('click', () => {
-    franja.hidden = true;
-    localStorage.setItem('instalar_cerrado', '1');
+    mostrar({
+      mensaje: 'Accede más rápido y hasta con mala señal instalando la app en tu teléfono.',
+      conBoton: true
+    });
   });
 }
 

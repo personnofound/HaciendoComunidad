@@ -6,7 +6,7 @@ import {
   esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada,
   obtenerUbicacionPorGPS
 } from './utils.js';
-import { validarFoto, subirFoto } from './fotos.js';
+import { validarFotos, subirFotos } from './fotos.js';
 import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
 
 const controlador = crearControladorDatos(COLECCIONES.desaparecidos);
@@ -45,6 +45,18 @@ function estadoResuelto(item) {
   return item.estado === 'encontrado' || item.estado === 'reclamado';
 }
 
+function galeriaFotosHTML(item) {
+  const urls = Array.isArray(item.fotos) && item.fotos.length ? item.fotos : (item.fotoUrl ? [item.fotoUrl] : []);
+  if (urls.length === 0) return '';
+  const alt = `Foto de ${item.nombre || 'la publicación'}`;
+  if (urls.length === 1) {
+    return `<img class="foto-tarjeta" src="${escaparHTML(urls[0])}" alt="${escaparHTML(alt)}" loading="lazy">`;
+  }
+  return `<div class="galeria-fotos">${urls
+    .map((u) => `<img src="${escaparHTML(u)}" alt="${escaparHTML(alt)}" loading="lazy">`)
+    .join('')}</div>`;
+}
+
 function tarjetaHTML(item) {
   const contacto = item.contacto ? linkContacto(item.contacto) : null;
   const esPersona = item.tipoSujeto === 'persona';
@@ -71,7 +83,7 @@ function tarjetaHTML(item) {
       ${item.verificado ? '<span class="etiqueta verificado">✅ Fuente verificada</span>' : ''}
       ${resuelto ? `<span class="etiqueta resuelto">${textos.etiquetaResuelto}</span>` : ''}
       ${desactualizada ? '<span class="etiqueta alerta">⚠️ Varias personas dicen que esto podría estar desactualizado</span>' : ''}
-      ${item.fotoUrl ? `<img class="foto-tarjeta" src="${escaparHTML(item.fotoUrl)}" alt="Foto de ${escaparHTML(item.nombre || 'la publicación')}" loading="lazy">` : ''}
+      ${galeriaFotosHTML(item)}
       <p><strong>${escaparHTML(item.nombre || 'Sin nombre registrado')}</strong></p>
       <p>${escaparHTML(item.descripcion || '')}</p>
       <div class="meta">
@@ -266,14 +278,16 @@ export function iniciarFormularioDesaparecidos() {
   const inputFoto = document.getElementById('foto-desaparecido');
   const msgFoto = document.getElementById('msg-foto-desaparecido');
   inputFoto.addEventListener('change', () => {
-    const archivo = inputFoto.files[0];
-    const resultado = validarFoto(archivo);
+    const archivos = inputFoto.files;
+    const resultado = validarFotos(archivos);
     if (!resultado.ok) {
       msgFoto.textContent = resultado.error;
       msgFoto.classList.add('error');
       inputFoto.value = '';
     } else {
-      msgFoto.textContent = archivo ? `Foto lista: ${archivo.name}` : '';
+      msgFoto.textContent = archivos.length
+        ? `${archivos.length} foto${archivos.length === 1 ? '' : 's'} lista${archivos.length === 1 ? '' : 's'}: ${Array.from(archivos).map((a) => a.name).join(', ')}`
+        : '';
       msgFoto.classList.remove('error');
     }
   });
@@ -291,7 +305,7 @@ export function iniciarFormularioDesaparecidos() {
     const localidad = limpiarTexto(document.getElementById('localidad-desaparecido').value, 100);
     const ultimaUbicacion = limpiarTexto(document.getElementById('ubicacion-desaparecido').value, 150);
     const contacto = limpiarTexto(document.getElementById('contacto-desaparecido').value, 120);
-    const archivo = inputFoto.files[0] || null;
+    const archivos = inputFoto.files;
 
     const textos = TEXTOS_MODO[modoActivo];
     if (textos.nombreObligatorio && !nombre) {
@@ -309,7 +323,7 @@ export function iniciarFormularioDesaparecidos() {
       msg.classList.add('error');
       return;
     }
-    const validacionFoto = validarFoto(archivo);
+    const validacionFoto = validarFotos(archivos);
     if (!validacionFoto.ok) {
       msg.textContent = validacionFoto.error;
       msg.classList.add('error');
@@ -325,10 +339,10 @@ export function iniciarFormularioDesaparecidos() {
     const btn = form.querySelector('button[type=submit]');
     btn.disabled = true;
     try {
-      let fotoUrl = '';
-      if (archivo) {
-        btn.textContent = 'Subiendo foto…';
-        fotoUrl = await subirFoto(archivo, 'desaparecidos');
+      let fotos = [];
+      if (archivos.length) {
+        btn.textContent = `Subiendo ${archivos.length} foto${archivos.length === 1 ? '' : 's'}…`;
+        fotos = await subirFotos(archivos, 'desaparecidos');
       }
       btn.textContent = 'Publicando…';
       const estadoInicial = modoActivo === 'busco' ? 'buscando' : 'disponible';
@@ -342,7 +356,7 @@ export function iniciarFormularioDesaparecidos() {
           localidad,
           ultimaUbicacion,
           contacto,
-          fotoUrl,
+          fotos,
           estado: estadoInicial
         },
         {

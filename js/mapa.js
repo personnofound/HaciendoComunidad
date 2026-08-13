@@ -7,7 +7,7 @@ import {
   obtenerUbicacionPorGPS, buscarDireccion
 } from './utils.js';
 import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
-import { validarFoto, subirFoto } from './fotos.js';
+import { validarFotos, subirFotos } from './fotos.js';
 
 export { TIPOS_AYUDA };
 
@@ -106,6 +106,17 @@ function pintarMarcadores(items) {
   });
 }
 
+function galeriaFotosHTML(item) {
+  const urls = Array.isArray(item.fotos) && item.fotos.length ? item.fotos : (item.fotoUrl ? [item.fotoUrl] : []);
+  if (urls.length === 0) return '';
+  if (urls.length === 1) {
+    return `<img class="foto-tarjeta" src="${escaparHTML(urls[0])}" alt="Foto del reporte" loading="lazy">`;
+  }
+  return `<div class="galeria-fotos">${urls
+    .map((u) => `<img src="${escaparHTML(u)}" alt="Foto del reporte" loading="lazy">`)
+    .join('')}</div>`;
+}
+
 function afectacionHTML(item) {
   const partes = [];
   if (item.heridos > 0) partes.push(`🚑 ${item.heridos} herido${item.heridos === 1 ? '' : 's'}`);
@@ -144,7 +155,7 @@ function tarjetaHTML(item) {
       ${atendido ? '<span class="etiqueta resuelto">✅ Ya atendido</span>' : ''}
       ${desactualizada ? '<span class="etiqueta alerta">⚠️ Varias personas dicen que esto podría estar desactualizado</span>' : ''}
       <p>${escaparHTML(item.descripcion || '')}</p>
-      ${item.fotoUrl ? `<img class="foto-tarjeta" src="${escaparHTML(item.fotoUrl)}" alt="Foto del reporte" loading="lazy">` : ''}
+      ${galeriaFotosHTML(item)}
       ${afectacionHTML(item)}
       <div class="meta">
         ${item.localidad ? `<span>🏘️ ${escaparHTML(item.localidad)}</span>` : ''}
@@ -416,14 +427,16 @@ export function iniciarFormularioReporte() {
   const inputFoto = document.getElementById('foto-reporte');
   const msgFoto = document.getElementById('msg-foto-reporte');
   inputFoto.addEventListener('change', () => {
-    const archivo = inputFoto.files[0];
-    const resultado = validarFoto(archivo);
+    const archivos = inputFoto.files;
+    const resultado = validarFotos(archivos);
     if (!resultado.ok) {
       msgFoto.textContent = resultado.error;
       msgFoto.classList.add('error');
       inputFoto.value = '';
     } else {
-      msgFoto.textContent = archivo ? `Foto lista: ${archivo.name}` : '';
+      msgFoto.textContent = archivos.length
+        ? `${archivos.length} foto${archivos.length === 1 ? '' : 's'} lista${archivos.length === 1 ? '' : 's'}: ${Array.from(archivos).map((a) => a.name).join(', ')}`
+        : '';
       msgFoto.classList.remove('error');
     }
   });
@@ -537,8 +550,8 @@ export function iniciarFormularioReporte() {
       afectacion[campo.id] = numero;
     }
 
-    const archivo = inputFoto.files[0] || null;
-    const validacionFoto = validarFoto(archivo);
+    const archivos = inputFoto.files;
+    const validacionFoto = validarFotos(archivos);
     if (!validacionFoto.ok) {
       msg.textContent = validacionFoto.error;
       msg.classList.add('error');
@@ -556,10 +569,10 @@ export function iniciarFormularioReporte() {
     btn.disabled = true;
     btn.textContent = 'Enviando…';
     try {
-      let fotoUrl = '';
-      if (archivo) {
-        btn.textContent = 'Subiendo foto…';
-        fotoUrl = await subirFoto(archivo, 'reportes_ayuda');
+      let fotos = [];
+      if (archivos.length) {
+        btn.textContent = `Subiendo ${archivos.length} foto${archivos.length === 1 ? '' : 's'}…`;
+        fotos = await subirFotos(archivos, 'reportes_ayuda');
         btn.textContent = 'Enviando…';
       }
       const usuario = obtenerUsuarioActual();
@@ -569,7 +582,7 @@ export function iniciarFormularioReporte() {
           descripcion,
           localidad,
           contacto,
-          fotoUrl,
+          fotos,
           heridos: afectacion['heridos-reporte'],
           fallecidos: afectacion['fallecidos-reporte'],
           desaparecidos: afectacion['desaparecidos-reporte'],

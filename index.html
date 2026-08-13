@@ -43,6 +43,8 @@
 
 <div id="contenedor-sismo" hidden></div>
 
+<div id="contenedor-instalar" hidden></div>
+
 <div id="contenedor-avisos" hidden></div>
 
 <nav class="tabs" aria-label="Secciones">
@@ -124,8 +126,8 @@
           placeholder="Edad aproximada, ropa, señas particulares, raza y color si es mascota, etc."></textarea>
       </div>
       <div class="fila">
-        <label for="foto-desaparecido">Foto (opcional, máx. 5MB)</label>
-        <input type="file" id="foto-desaparecido" accept="image/*">
+        <label for="foto-desaparecido">Fotos (opcional, hasta 3, máx. 5MB cada una)</label>
+        <input type="file" id="foto-desaparecido" accept="image/*" multiple>
         <p class="ayuda-campo" id="msg-foto-desaparecido"></p>
       </div>
       <div class="fila">
@@ -308,8 +310,8 @@
         </div>
       </div>
       <div class="fila">
-        <label for="foto-reporte">Foto (opcional, máx. 5MB)</label>
-        <input type="file" id="foto-reporte" accept="image/*">
+        <label for="foto-reporte">Fotos (opcional, hasta 3, máx. 5MB cada una)</label>
+        <input type="file" id="foto-reporte" accept="image/*" multiple>
         <p class="ayuda-campo" id="msg-foto-reporte"></p>
       </div>
       <div class="fila">
@@ -319,15 +321,6 @@
       <button type="submit" class="btn btn-primario">Enviar reporte</button>
       <p class="msg-form" id="msg-form-reporte"></p>
     </form>
-  </div>
-</div>
-
-<!-- ===================== Franja instalar PWA ===================== -->
-<div class="franja-instalar" id="franja-instalar" hidden>
-  <p id="texto-instalar">Instala esta app en tu teléfono para acceder más rápido, incluso con mala señal.</p>
-  <div class="botones">
-    <button type="button" class="btn btn-primario" id="btn-instalar" style="padding:8px 14px">Instalar</button>
-    <button type="button" class="cerrar" id="btn-cerrar-instalar" aria-label="Cerrar">✕</button>
   </div>
 </div>
 

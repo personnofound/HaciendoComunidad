@@ -22,6 +22,10 @@ service cloud.firestore {
       return valor is int && valor >= 0 && valor <= 99999;
     }
 
+    function esListaFotosValida(valor) {
+      return valor is list && valor.size() <= 3;
+    }
+
     function timestampEsDelServidor() {
       return request.resource.data.timestamp == request.time;
     }
@@ -88,7 +92,7 @@ service cloud.firestore {
         esTextoRequerido(request.resource.data.descripcion, 300) &&
         esTextoRequerido(request.resource.data.localidad, 100) &&
         esTextoOpcionalValido(request.resource.data.contacto, 120) &&
-        esTextoOpcionalValido(request.resource.data.fotoUrl, 500) &&
+        esListaFotosValida(request.resource.data.fotos) &&
         esConteoValido(request.resource.data.heridos) &&
         esConteoValido(request.resource.data.fallecidos) &&
         esConteoValido(request.resource.data.desaparecidos) &&
@@ -121,7 +125,7 @@ service cloud.firestore {
         esTextoRequerido(request.resource.data.descripcion, 400) &&
         esTextoOpcionalValido(request.resource.data.localidad, 100) &&
         esTextoOpcionalValido(request.resource.data.ultimaUbicacion, 150) &&
-        esTextoOpcionalValido(request.resource.data.fotoUrl, 500) &&
+        esListaFotosValida(request.resource.data.fotos) &&
         esTextoRequerido(request.resource.data.contacto, 120) &&
         (request.resource.data.modo == 'busco'
           ? request.resource.data.estado == 'buscando'
