@@ -88,6 +88,10 @@ function agregarAListaLocal(clave, valor, tope = 300) {
   if (!lista.includes(valor)) lista.push(valor);
   localStorage.setItem(clave, JSON.stringify(lista.slice(-tope)));
 }
+function quitarDeListaLocal(clave, valor) {
+  const lista = leerListaLocal(clave).filter((v) => v !== valor);
+  localStorage.setItem(clave, JSON.stringify(lista));
+}
 
 export function esPublicacionPropia(coleccionId, docId) {
   return leerListaLocal(`mis_publicaciones_${coleccionId}`).includes(docId);
@@ -103,6 +107,10 @@ export function recordarMarcaDesactualizada(coleccionId, docId) {
   agregarAListaLocal(`flag_desactualizado_${coleccionId}`, docId);
 }
 
+export function olvidarMarcaDesactualizada(coleccionId, docId) {
+  quitarDeListaLocal(`flag_desactualizado_${coleccionId}`, docId);
+}
+
 // --- Comunidad: recuerda en este dispositivo si la persona ya "tomó"
 // (Yo me encargo / Necesito) una petición u oferta, y si ya confirmó su
 // propia entrega. No hay cuentas, así que esto es por dispositivo, igual
@@ -114,11 +122,17 @@ export function yaReclamoEsto(coleccionId, docId) {
 export function recordarReclamo(coleccionId, docId) {
   agregarAListaLocal(`reclamo_${coleccionId}`, docId);
 }
+export function olvidarReclamo(coleccionId, docId) {
+  quitarDeListaLocal(`reclamo_${coleccionId}`, docId);
+}
 export function yaConfirmoEntrega(coleccionId, docId) {
   return leerListaLocal(`entrega_confirmada_${coleccionId}`).includes(docId);
 }
 export function recordarConfirmacionEntrega(coleccionId, docId) {
   agregarAListaLocal(`entrega_confirmada_${coleccionId}`, docId);
+}
+export function olvidarConfirmacionEntrega(coleccionId, docId) {
+  quitarDeListaLocal(`entrega_confirmada_${coleccionId}`, docId);
 }
 
 export function estoyAyudandoAqui(docId) {

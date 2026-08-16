@@ -4,8 +4,8 @@ import { crearControladorDatos } from './datos.js';
 import { COLECCIONES, CATEGORIAS_COMUNIDAD, UMBRAL_DESACTUALIZADO, UMBRAL_ALTA_DEMANDA } from './config.js';
 import {
   escaparHTML, limpiarTexto, puedeEnviar, marcarEnviado, tiempoRelativo, linkContacto,
-  esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada,
-  yaReclamoEsto, recordarReclamo, yaConfirmoEntrega, recordarConfirmacionEntrega,
+  esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada, olvidarMarcaDesactualizada,
+  yaReclamoEsto, recordarReclamo, olvidarReclamo, yaConfirmoEntrega, recordarConfirmacionEntrega, olvidarConfirmacionEntrega,
   obtenerUbicacionPorGPS
 } from './utils.js';
 import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
@@ -124,7 +124,7 @@ function tarjetaHTML(item) {
   const yoConfirme = !esLegado(item) && yaConfirmoEntrega(COLECCION_ID, item.id);
 
   return `
-    <article class="tarjeta ${resuelta ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}">
+    <article class="tarjeta ${resuelta ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}" data-doc-id="${item.id}">
       <div class="fila-top">
         <span class="etiqueta ${esPeticion ? 'peticion' : 'oferta'}">
           ${esPeticion ? '🙋 Necesito' : '🤝 Puedo ofrecer'}
@@ -175,6 +175,15 @@ function renderLista(items, { agregar = false } = {}) {
   }
 }
 
+function reemplazarTarjetaEnDOM(id) {
+  const item = itemsActuales.find((it) => it.id === id);
+  const nodoViejo = document.querySelector(`#lista-comunidad [data-doc-id="${id}"]`);
+  if (!item || !nodoViejo) return;
+  const envoltorio = document.createElement('div');
+  envoltorio.innerHTML = tarjetaHTML(item).trim();
+  nodoViejo.replaceWith(envoltorio.firstElementChild);
+}
+
 export function iniciarListaYRealtimeComunidad() {
   const avisoCache = document.getElementById('aviso-cache-comunidad');
   controlador.escucharRecientes({
@@ -194,25 +203,59 @@ export function iniciarListaYRealtimeComunidad() {
     const boton = e.target.closest('[data-accion]');
     if (!boton) return;
     const { accion, id } = boton.dataset;
-    boton.disabled = true;
-    try {
-      if (accion === 'cancelar') {
-        await controlador.marcarEstado(id, 'cancelada');
-      } else if (accion === 'confirmar-atendida') {
-        await controlador.marcarEstado(id, 'atendida');
-      } else if (accion === 'tomar') {
-        await controlador.incrementarCampo(id, 'numAyudantes');
-        recordarReclamo(COLECCION_ID, id);
-      } else if (accion === 'confirmar-entrega') {
-        await controlador.incrementarCampo(id, 'numEntregas');
-        recordarConfirmacionEntrega(COLECCION_ID, id);
-      } else if (accion === 'flagear') {
-        await controlador.reportarDesactualizado(id);
-        recordarMarcaDesactualizada(COLECCION_ID, id);
+    const item = itemsActuales.find((it) => it.id === id);
+
+    if (accion === 'cancelar' || accion === 'confirmar-atendida') {
+      boton.disabled = true;
+      try {
+        await controlador.marcarEstado(id, accion === 'cancelar' ? 'cancelada' : 'atendida');
+      } catch (err) {
+        console.error(err);
+        boton.disabled = false;
       }
-    } catch (err) {
-      console.error(err);
-      boton.disabled = false;
+      return;
+    }
+
+    if (accion === 'tomar') {
+      recordarReclamo(COLECCION_ID, id);
+      if (item) item.numAyudantes = (item.numAyudantes || 0) + 1;
+      reemplazarTarjetaEnDOM(id);
+      try {
+        await controlador.incrementarCampo(id, 'numAyudantes');
+      } catch (err) {
+        console.error(err);
+        olvidarReclamo(COLECCION_ID, id);
+        if (item) item.numAyudantes = Math.max(0, (item.numAyudantes || 0) - 1);
+        reemplazarTarjetaEnDOM(id);
+      }
+      return;
+    }
+
+    if (accion === 'confirmar-entrega') {
+      recordarConfirmacionEntrega(COLECCION_ID, id);
+      if (item) item.numEntregas = (item.numEntregas || 0) + 1;
+      reemplazarTarjetaEnDOM(id);
+      try {
+        await controlador.incrementarCampo(id, 'numEntregas');
+      } catch (err) {
+        console.error(err);
+        olvidarConfirmacionEntrega(COLECCION_ID, id);
+        if (item) item.numEntregas = Math.max(0, (item.numEntregas || 0) - 1);
+        reemplazarTarjetaEnDOM(id);
+      }
+      return;
+    }
+
+    if (accion === 'flagear') {
+      recordarMarcaDesactualizada(COLECCION_ID, id);
+      reemplazarTarjetaEnDOM(id);
+      try {
+        await controlador.reportarDesactualizado(id);
+      } catch (err) {
+        console.error(err);
+        olvidarMarcaDesactualizada(COLECCION_ID, id);
+        reemplazarTarjetaEnDOM(id);
+      }
     }
   });
 

@@ -3,7 +3,7 @@ import { crearControladorDatos } from './datos.js';
 import { COLECCIONES, UMBRAL_DESACTUALIZADO } from './config.js';
 import {
   escaparHTML, limpiarTexto, puedeEnviar, marcarEnviado, tiempoRelativo, linkContacto,
-  esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada,
+  esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada, olvidarMarcaDesactualizada,
   obtenerUbicacionPorGPS
 } from './utils.js';
 import { validarFotos, subirFotos } from './fotos.js';
@@ -75,7 +75,7 @@ function tarjetaHTML(item) {
   }
 
   return `
-    <article class="tarjeta ${resuelto ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}" data-tipo-sujeto="${escaparHTML(item.tipoSujeto || 'persona')}">
+    <article class="tarjeta ${resuelto ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}" data-doc-id="${item.id}" data-tipo-sujeto="${escaparHTML(item.tipoSujeto || 'persona')}">
       <div class="fila-top">
         <span class="etiqueta ${esPersona ? 'urgente' : 'info'}">${esPersona ? '🧍 Persona' : '🐾 Mascota'}</span>
         <span class="meta">${tiempoRelativo(item._fecha)}</span>
@@ -136,6 +136,15 @@ function actualizarTextosPorModo() {
   document.getElementById('nombre-desaparecido').required = textos.nombreObligatorio;
 }
 
+function reemplazarTarjetaEnDOM(id) {
+  const item = itemsActuales.find((it) => it.id === id);
+  const nodoViejo = document.querySelector(`#lista-desaparecidos [data-doc-id="${id}"]`);
+  if (!item || !nodoViejo) return;
+  const envoltorio = document.createElement('div');
+  envoltorio.innerHTML = tarjetaHTML(item).trim();
+  nodoViejo.replaceWith(envoltorio.firstElementChild);
+}
+
 export function iniciarListaYRealtimeDesaparecidos() {
   const avisoCache = document.getElementById('aviso-cache-desaparecidos');
   controlador.escucharRecientes({
@@ -155,19 +164,30 @@ export function iniciarListaYRealtimeDesaparecidos() {
     const boton = e.target.closest('[data-accion]');
     if (!boton) return;
     const { accion, id } = boton.dataset;
-    boton.disabled = true;
-    try {
-      if (accion === 'resolver') {
+
+    if (accion === 'resolver') {
+      boton.disabled = true;
+      try {
         const item = itemsActuales.find((it) => it.id === id);
         const nuevoEstado = item && item.modo === 'encontre' ? 'reclamado' : 'encontrado';
         await controlador.marcarEstado(id, nuevoEstado);
-      } else if (accion === 'flagear') {
-        await controlador.reportarDesactualizado(id);
-        recordarMarcaDesactualizada(COLECCION_ID, id);
+      } catch (err) {
+        console.error(err);
+        boton.disabled = false;
       }
-    } catch (err) {
-      console.error(err);
-      boton.disabled = false;
+      return;
+    }
+
+    if (accion === 'flagear') {
+      recordarMarcaDesactualizada(COLECCION_ID, id);
+      reemplazarTarjetaEnDOM(id);
+      try {
+        await controlador.reportarDesactualizado(id);
+      } catch (err) {
+        console.error(err);
+        olvidarMarcaDesactualizada(COLECCION_ID, id);
+        reemplazarTarjetaEnDOM(id);
+      }
     }
   });
 

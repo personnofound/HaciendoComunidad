@@ -3,7 +3,7 @@ import { crearControladorDatos } from './datos.js';
 import { COLECCIONES, UBICACION_POR_DEFECTO, UMBRAL_DESACTUALIZADO, TIPOS_AYUDA, TIPOS_CON_CONTEO_AYUDANTES } from './config.js';
 import {
   escaparHTML, limpiarTexto, puedeEnviar, marcarEnviado, tiempoRelativo, linkContacto,
-  esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada,
+  esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada, olvidarMarcaDesactualizada,
   obtenerUbicacionPorGPS, buscarDireccion,
   estoyAyudandoAqui, marcarAyudandoAqui, quitarAyudandoAqui
 } from './utils.js';
@@ -178,7 +178,7 @@ function tarjetaHTML(item) {
   }
 
   return `
-    <article class="tarjeta ${atendido ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}">
+    <article class="tarjeta ${atendido ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}" data-doc-id="${item.id}">
       <div class="fila-top">
         <span class="etiqueta urgente">${escaparHTML(etiquetaPorTipo(item.tipo))}</span>
         <span class="meta">${tiempoRelativo(item._fecha)}</span>
@@ -282,6 +282,15 @@ function refiltrarTodo() {
   renderResumenAfectacion(visibles);
 }
 
+function reemplazarTarjetaEnDOM(id) {
+  const item = itemsActuales.find((it) => it.id === id);
+  const nodoViejo = document.querySelector(`#lista-reportes [data-doc-id="${id}"]`);
+  if (!item || !nodoViejo) return;
+  const envoltorio = document.createElement('div');
+  envoltorio.innerHTML = tarjetaHTML(item).trim();
+  nodoViejo.replaceWith(envoltorio.firstElementChild);
+}
+
 export function iniciarListaYRealtime() {
   const avisoCache = document.getElementById('aviso-cache-reportes');
   controlador.escucharRecientes({
@@ -301,25 +310,74 @@ export function iniciarListaYRealtime() {
     const boton = e.target.closest('[data-accion]');
     if (!boton) return;
     const { accion, id } = boton.dataset;
-    boton.disabled = true;
-    try {
-      if (accion === 'resolver') {
+    const item = itemsActuales.find((it) => it.id === id);
+
+    if (accion === 'resolver') {
+      boton.disabled = true;
+      try {
         await controlador.marcarEstado(id, 'atendido');
-      } else if (accion === 'flagear') {
-        await controlador.reportarDesactualizado(id);
-        recordarMarcaDesactualizada(COLECCION_ID, id);
-      } else if (accion === 'unirse-sitio') {
-        await controlador.incrementarCampo(id, 'personasAyudando');
-        marcarAyudandoAqui(id);
-      } else if (accion === 'salir-sitio') {
-        await controlador.decrementarCampo(id, 'personasAyudando');
-        quitarAyudandoAqui(id);
-      } else if (accion === 'estado-operativo') {
-        await controlador.cambiarCampo(id, 'estadoOperativo', boton.dataset.valor);
+      } catch (err) {
+        console.error(err);
+        boton.disabled = false;
       }
-    } catch (err) {
-      console.error(err);
-      boton.disabled = false;
+      return;
+    }
+
+    if (accion === 'flagear') {
+      recordarMarcaDesactualizada(COLECCION_ID, id);
+      reemplazarTarjetaEnDOM(id);
+      try {
+        await controlador.reportarDesactualizado(id);
+      } catch (err) {
+        console.error(err);
+        olvidarMarcaDesactualizada(COLECCION_ID, id);
+        reemplazarTarjetaEnDOM(id);
+      }
+      return;
+    }
+
+    if (accion === 'unirse-sitio') {
+      marcarAyudandoAqui(id);
+      if (item) item.personasAyudando = (item.personasAyudando || 0) + 1;
+      reemplazarTarjetaEnDOM(id);
+      try {
+        await controlador.incrementarCampo(id, 'personasAyudando');
+      } catch (err) {
+        console.error(err);
+        quitarAyudandoAqui(id);
+        if (item) item.personasAyudando = Math.max(0, (item.personasAyudando || 0) - 1);
+        reemplazarTarjetaEnDOM(id);
+      }
+      return;
+    }
+
+    if (accion === 'salir-sitio') {
+      quitarAyudandoAqui(id);
+      if (item) item.personasAyudando = Math.max(0, (item.personasAyudando || 0) - 1);
+      reemplazarTarjetaEnDOM(id);
+      try {
+        await controlador.decrementarCampo(id, 'personasAyudando');
+      } catch (err) {
+        console.error(err);
+        marcarAyudandoAqui(id);
+        if (item) item.personasAyudando = (item.personasAyudando || 0) + 1;
+        reemplazarTarjetaEnDOM(id);
+      }
+      return;
+    }
+
+    if (accion === 'estado-operativo') {
+      const valorAnterior = item ? item.estadoOperativo : '';
+      const valorNuevo = boton.dataset.valor;
+      if (item) item.estadoOperativo = valorNuevo;
+      reemplazarTarjetaEnDOM(id);
+      try {
+        await controlador.cambiarCampo(id, 'estadoOperativo', valorNuevo);
+      } catch (err) {
+        console.error(err);
+        if (item) item.estadoOperativo = valorAnterior;
+        reemplazarTarjetaEnDOM(id);
+      }
     }
   });
 

@@ -44,7 +44,7 @@ export const TIPOS_AYUDA = [
 
 export const ENFRIAMIENTO_SEGUNDOS = 30;
 
-export const UMBRAL_DESACTUALIZADO = 15;
+export const UMBRAL_DESACTUALIZADO = 8;
 
 export const UMBRAL_ALTA_DEMANDA = 5;
 
