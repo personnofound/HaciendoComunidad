@@ -2,26 +2,6 @@
 
 export const AVISOS = [
   {
-    id: 'pico-placa-par-cali',
-    titulo: '🚗 Pico y placa hoy Cali',
-    mensaje: 'Restricción para vehículos con placa terminada en 0, 2, 4, 6, 8, de 6:00am a 7:00pm. Aplica para todo tipo de vehículos (Incluye híbridos y eléctricos).',
-    diasSemana: [3, 5],
-    horaInicio: '06:00',
-    horaFin: '19:00',
-    link: 'https://www.elpais.com.co/cali/vuelve-el-pico-y-placa-a-cali-asi-funcionara-nuevo-esquema-para-placas-pares-e-impares-1137.html',
-    textoLink: '🔗 Ver el detalle oficial'
-  },
-  {
-    id: 'pico-placa-impar-cali',
-    titulo: '🚗 Pico y placa hoy Cali',
-    mensaje: 'Restricción para vehículos con placa terminada en 1, 3, 5, 7, 9, de 6:00am a 7:00pm. Aplica para todo tipo de vehículos (Incluye híbridos y eléctricos).',
-    diasSemana: [4, 6],
-    horaInicio: '06:00',
-    horaFin: '19:00',
-    link: 'https://www.elpais.com.co/cali/vuelve-el-pico-y-placa-a-cali-asi-funcionara-nuevo-esquema-para-placas-pares-e-impares-1137.html',
-    textoLink: '🔗 Ver el detalle oficial'
-  },
-  {
     id: 'adres-comunicado-terremoto',
     titulo: '🏥 ADRES: Comunicado de interés para las víctimas del terremoto.',
     mensaje: 'El ADRES reconocerá el pago de indemnizaciones y gastos funerarios para las víctimas mortales de catástrofes y/o eventos naturales. Así como el pago de servicios de salud prestados a las víctimas de estos eventos.',

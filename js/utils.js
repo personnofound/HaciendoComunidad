@@ -102,6 +102,36 @@ export function yaMarcadaComoDesactualizada(coleccionId, docId) {
 export function recordarMarcaDesactualizada(coleccionId, docId) {
   agregarAListaLocal(`flag_desactualizado_${coleccionId}`, docId);
 }
+
+// --- Comunidad: recuerda en este dispositivo si la persona ya "tomó"
+// (Yo me encargo / Necesito) una petición u oferta, y si ya confirmó su
+// propia entrega. No hay cuentas, así que esto es por dispositivo, igual
+// que "mis publicaciones" — es una ayuda de interfaz, la validación real
+// de qué cambios de campo son válidos vive en firestore.rules.
+export function yaReclamoEsto(coleccionId, docId) {
+  return leerListaLocal(`reclamo_${coleccionId}`).includes(docId);
+}
+export function recordarReclamo(coleccionId, docId) {
+  agregarAListaLocal(`reclamo_${coleccionId}`, docId);
+}
+export function yaConfirmoEntrega(coleccionId, docId) {
+  return leerListaLocal(`entrega_confirmada_${coleccionId}`).includes(docId);
+}
+export function recordarConfirmacionEntrega(coleccionId, docId) {
+  agregarAListaLocal(`entrega_confirmada_${coleccionId}`, docId);
+}
+
+export function estoyAyudandoAqui(docId) {
+  return leerListaLocal('ayudando_en_sitio').includes(docId);
+}
+export function marcarAyudandoAqui(docId) {
+  agregarAListaLocal('ayudando_en_sitio', docId);
+}
+export function quitarAyudandoAqui(docId) {
+  const clave = 'ayudando_en_sitio';
+  const lista = leerListaLocal(clave).filter((id) => id !== docId);
+  localStorage.setItem(clave, JSON.stringify(lista));
+}
 export async function obtenerUbicacionPorGPS() {
   if (!navigator.geolocation) {
     throw new Error('Este navegador no soporta geolocalización.');

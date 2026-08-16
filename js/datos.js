@@ -150,6 +150,33 @@ export function crearControladorDatos(nombreColeccion) {
     return updateDoc(doc(db, nombreColeccion, id), { reportesAbuso: increment(1) });
   }
 
+  /**
+   * Suma 1 a un campo numérico cualquiera del documento (ej. numAyudantes,
+   * numEntregas, personasAyudando). Las reglas de Firestore son las que
+   * realmente definen qué campos se pueden tocar así y bajo qué condiciones.
+   */
+  async function incrementarCampo(id, campo) {
+    return updateDoc(doc(db, nombreColeccion, id), { [campo]: increment(1) });
+  }
+
+  /**
+   * Resta 1 a un campo numérico cualquiera (ej. cuando alguien deja de
+   * estar ayudando en un sitio). Igual que arriba, validado del lado del
+   * servidor en firestore.rules.
+   */
+  async function decrementarCampo(id, campo) {
+    return updateDoc(doc(db, nombreColeccion, id), { [campo]: increment(-1) });
+  }
+
+  /**
+   * Cambia un campo de texto/enum cualquiera a un valor fijo (ej. el
+   * "estadoOperativo" de un punto de acopio: necesita_personas /
+   * necesita_insumos / lleno).
+   */
+  async function cambiarCampo(id, campo, valor) {
+    return updateDoc(doc(db, nombreColeccion, id), { [campo]: valor });
+  }
+
   return {
     escucharRecientes,
     detenerEscucha,
@@ -158,6 +185,9 @@ export function crearControladorDatos(nombreColeccion) {
     crearConAutoria,
     marcarEstado,
     reportarDesactualizado,
-    reportarAbuso
+    reportarAbuso,
+    incrementarCampo,
+    decrementarCampo,
+    cambiarCampo
   };
 }

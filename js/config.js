@@ -46,6 +46,10 @@ export const ENFRIAMIENTO_SEGUNDOS = 30;
 
 export const UMBRAL_DESACTUALIZADO = 15;
 
+export const UMBRAL_ALTA_DEMANDA = 5;
+
+export const TIPOS_CON_CONTEO_AYUDANTES = ['colapso', 'alimentos'];
+
 export const TAMANO_MAX_FOTO_MB = 5;
 export const TAMANO_MAX_FOTO_BYTES = TAMANO_MAX_FOTO_MB * 1024 * 1024;
 

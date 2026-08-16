@@ -1,10 +1,11 @@
 // js/mapa.js
 import { crearControladorDatos } from './datos.js';
-import { COLECCIONES, UBICACION_POR_DEFECTO, UMBRAL_DESACTUALIZADO, TIPOS_AYUDA } from './config.js';
+import { COLECCIONES, UBICACION_POR_DEFECTO, UMBRAL_DESACTUALIZADO, TIPOS_AYUDA, TIPOS_CON_CONTEO_AYUDANTES } from './config.js';
 import {
   escaparHTML, limpiarTexto, puedeEnviar, marcarEnviado, tiempoRelativo, linkContacto,
   esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada,
-  obtenerUbicacionPorGPS, buscarDireccion
+  obtenerUbicacionPorGPS, buscarDireccion,
+  estoyAyudandoAqui, marcarAyudandoAqui, quitarAyudandoAqui
 } from './utils.js';
 import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
 import { validarFotos, subirFotos } from './fotos.js';
@@ -98,6 +99,8 @@ function pintarMarcadores(items) {
       ${item.verificado ? ' <span style="color:#c9960c">✅ Verificado</span>' : ''}<br>
       ${escaparHTML(item.descripcion || '')}<br>
       ${afectacionPopup.length ? `<small>${afectacionPopup.join(' · ')}</small><br>` : ''}
+      ${TIPOS_CON_CONTEO_AYUDANTES.includes(item.tipo) && item.personasAyudando !== undefined
+        ? `<small>🧑‍🤝‍🧑 ${item.personasAyudando} ayudando ahora mismo</small><br>` : ''}
       ${item.localidad ? `<small>🏘️ ${escaparHTML(item.localidad)}</small><br>` : ''}
       <small>${tiempoRelativo(item._fecha)}</small>
       ${contacto && contacto.texto ? `<br><small>Contacto: ${escaparHTML(contacto.texto)}</small>` : ''}
@@ -115,6 +118,35 @@ function galeriaFotosHTML(item) {
   return `<div class="galeria-fotos">${urls
     .map((u) => `<img src="${escaparHTML(u)}" alt="Foto del reporte" loading="lazy">`)
     .join('')}</div>`;
+}
+
+function conteoAyudantesHTML(item) {
+  if (!TIPOS_CON_CONTEO_AYUDANTES.includes(item.tipo)) return '';
+  if (item.personasAyudando === undefined) return '';
+
+  const yoEstoy = estoyAyudandoAqui(item.id);
+  const estadoOp = item.estadoOperativo || '';
+
+  const opciones = [
+    { valor: 'necesita_personas', texto: '🙋 Necesitan personas', clase: 'necesita-personas' },
+    { valor: 'necesita_insumos', texto: '📦 Necesitan insumos', clase: 'necesita-insumos' },
+    { valor: 'lleno', texto: '✅ Ya está lleno', clase: 'lleno' }
+  ];
+
+  return `
+    <div class="conteo-ayudantes">
+      <div class="conteo-ayudantes-fila">
+        <span class="conteo-ayudantes-numero">🧑‍🤝‍🧑 ${item.personasAyudando} ayudando ahora mismo</span>
+        <button type="button" class="btn-mini ${yoEstoy ? 'resolver' : ''}" data-accion="${yoEstoy ? 'salir-sitio' : 'unirse-sitio'}" data-id="${item.id}">
+          ${yoEstoy ? '➖ Ya no estoy aquí' : '➕ Estoy aquí ayudando'}
+        </button>
+      </div>
+      <div class="chips-estado-operativo">
+        ${opciones.map((o) => `
+          <button type="button" class="chip-mini ${o.clase} ${estadoOp === o.valor ? 'activo' : ''}" data-accion="estado-operativo" data-valor="${o.valor}" data-id="${item.id}">${o.texto}</button>
+        `).join('')}
+      </div>
+    </div>`;
 }
 
 function afectacionHTML(item) {
@@ -157,6 +189,7 @@ function tarjetaHTML(item) {
       <p>${escaparHTML(item.descripcion || '')}</p>
       ${galeriaFotosHTML(item)}
       ${afectacionHTML(item)}
+      ${conteoAyudantesHTML(item)}
       <div class="meta">
         ${item.localidad ? `<span>🏘️ ${escaparHTML(item.localidad)}</span>` : ''}
         ${typeof item.lat === 'number' ? `<span>📍 ${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}</span>` : ''}
@@ -275,6 +308,14 @@ export function iniciarListaYRealtime() {
       } else if (accion === 'flagear') {
         await controlador.reportarDesactualizado(id);
         recordarMarcaDesactualizada(COLECCION_ID, id);
+      } else if (accion === 'unirse-sitio') {
+        await controlador.incrementarCampo(id, 'personasAyudando');
+        marcarAyudandoAqui(id);
+      } else if (accion === 'salir-sitio') {
+        await controlador.decrementarCampo(id, 'personasAyudando');
+        quitarAyudandoAqui(id);
+      } else if (accion === 'estado-operativo') {
+        await controlador.cambiarCampo(id, 'estadoOperativo', boton.dataset.valor);
       }
     } catch (err) {
       console.error(err);
@@ -588,7 +629,9 @@ export function iniciarFormularioReporte() {
           desaparecidos: afectacion['desaparecidos-reporte'],
           lat: ubicacionSeleccionada.lat,
           lng: ubicacionSeleccionada.lng,
-          estado: 'activo'
+          estado: 'activo',
+          personasAyudando: 0,
+          estadoOperativo: ''
         },
         {
           intentarVerificado: usuarioEsCuentaInstitucional(),

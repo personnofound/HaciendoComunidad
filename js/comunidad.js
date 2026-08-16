@@ -1,46 +1,116 @@
 // js/comunidad.js
+
 import { crearControladorDatos } from './datos.js';
-import { COLECCIONES, CATEGORIAS_COMUNIDAD, UMBRAL_DESACTUALIZADO } from './config.js';
+import { COLECCIONES, CATEGORIAS_COMUNIDAD, UMBRAL_DESACTUALIZADO, UMBRAL_ALTA_DEMANDA } from './config.js';
 import {
   escaparHTML, limpiarTexto, puedeEnviar, marcarEnviado, tiempoRelativo, linkContacto,
   esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada,
+  yaReclamoEsto, recordarReclamo, yaConfirmoEntrega, recordarConfirmacionEntrega,
   obtenerUbicacionPorGPS
 } from './utils.js';
 import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
 
 const controlador = crearControladorDatos(COLECCIONES.comunidad);
+const COLECCION_ID = COLECCIONES.comunidad;
+
 let itemsActuales = [];
 let filtroTipoPublicacion = 'todos'; // todos | peticion | oferta
 let filtroCategoria = 'todas';
 let filtroZona = '';
-let mostrarCubiertos = false;
+let mostrarResueltas = false;
 let soloMisPublicaciones = false;
 let soloVerificados = false;
-const COLECCION_ID = COLECCIONES.comunidad;
 
 function etiquetaCategoria(id) {
   return (CATEGORIAS_COMUNIDAD.find((c) => c.id === id) || { etiqueta: 'Otro' }).etiqueta;
 }
 
+function esLegado(item) {
+  return item.numAyudantes === undefined || item.numEntregas === undefined;
+}
+
+function estaResuelta(item) {
+  if (esLegado(item)) return item.estado === 'cubierto'; // valor viejo, ya no se genera
+  return item.estado === 'atendida' || item.estado === 'cancelada';
+}
+
+function estadoVisual(item) {
+  const esPeticion = item.tipoPublicacion === 'peticion';
+
+  if (esLegado(item)) {
+    return { texto: 'ℹ️ Sin información de seguimiento', clase: 'legado' };
+  }
+  if (item.estado === 'cancelada') {
+    return {
+      texto: esPeticion ? '🚫 Ya no se necesita' : '🚫 Ya no está disponible',
+      clase: 'cancelada'
+    };
+  }
+  if (item.estado === 'atendida') {
+    return {
+      texto: esPeticion ? '✅ Ayuda entregada' : '✅ Entrega completada',
+      clase: 'atendida'
+    };
+  }
+  if (item.numAyudantes === 0) {
+    return esPeticion
+      ? { texto: '🔴 Urgente — nadie se ha ofrecido todavía', clase: 'urgente' }
+      : { texto: '🟢 Disponible', clase: 'disponible' };
+  }
+  if (item.numAyudantes >= UMBRAL_ALTA_DEMANDA) {
+    return esPeticion
+      ? { texto: `🟣 Mucha gente ya se ofreció (${item.numAyudantes}) — puedes sumarte si aún hace falta`, clase: 'alta-demanda' }
+      : { texto: `🔥 Solicitado muchas veces (${item.numAyudantes}) — podría estarse agotando`, clase: 'alta-demanda' };
+  }
+  return esPeticion
+    ? { texto: `🟡 ${item.numAyudantes} persona${item.numAyudantes === 1 ? '' : 's'} ya se ofreció a ayudar`, clase: 'en-atencion' }
+    : { texto: `🟡 ${item.numAyudantes} persona${item.numAyudantes === 1 ? '' : 's'} ya lo solicitó`, clase: 'en-atencion' };
+}
+
+function accionesHTML(item) {
+  if (esLegado(item) || item.estado !== 'abierta') return '';
+
+  const esPeticion = item.tipoPublicacion === 'peticion';
+  const esMia = esPublicacionPropia(COLECCION_ID, item.id);
+  const yoReclame = yaReclamoEsto(COLECCION_ID, item.id);
+  const yoConfirme = yaConfirmoEntrega(COLECCION_ID, item.id);
+  const acciones = [];
+
+  if (esMia) {
+    const textoCancelar = esPeticion ? '🚫 Ya no lo necesito' : '🚫 Ya no tengo disponible';
+    acciones.push(`<button type="button" class="btn-mini" data-accion="cancelar" data-id="${item.id}">${textoCancelar}</button>`);
+    if (item.numAyudantes > 0) {
+      const textoConfirmar = esPeticion ? '✅ Confirmar que ya me ayudaron' : '✅ Confirmar entrega completa';
+      acciones.push(`<button type="button" class="btn-mini resolver" data-accion="confirmar-atendida" data-id="${item.id}">${textoConfirmar}</button>`);
+    }
+  } else {
+    if (!yoReclame) {
+      const textoTomar = esPeticion ? '🙋 Yo me encargo' : '🙋 Necesito esto';
+      acciones.push(`<button type="button" class="btn-mini resolver" data-accion="tomar" data-id="${item.id}">${textoTomar}</button>`);
+    } else if (!yoConfirme) {
+      const textoConfirmar = esPeticion ? '✅ Ya lo entregué' : '✅ Ya me lo dieron';
+      acciones.push(`<button type="button" class="btn-mini resolver" data-accion="confirmar-entrega" data-id="${item.id}">${textoConfirmar}</button>`);
+    }
+  }
+
+  const yaFlageada = yaMarcadaComoDesactualizada(COLECCION_ID, item.id);
+  if (!yaFlageada) {
+    acciones.push(`<button type="button" class="btn-mini" data-accion="flagear" data-id="${item.id}">🚩 Ya no aplica / desactualizado</button>`);
+  }
+
+  return acciones.length ? `<div class="acciones-tarjeta">${acciones.join('')}</div>` : '';
+}
+
 function tarjetaHTML(item) {
   const contacto = item.contacto ? linkContacto(item.contacto) : null;
   const esPeticion = item.tipoPublicacion === 'peticion';
-  const cubierto = item.estado === 'cubierto';
-  const desactualizada = (item.marcasDesactualizado || 0) >= UMBRAL_DESACTUALIZADO;
-  const esMia = esPublicacionPropia(COLECCION_ID, item.id);
-  const yaFlageada = yaMarcadaComoDesactualizada(COLECCION_ID, item.id);
-
-  const acciones = [];
-  if (!cubierto && esMia) {
-    const texto = esPeticion ? '✅ Marcar como cubierta (ya no necesito)' : '✅ Marcar como completa (ya no tengo más)';
-    acciones.push(`<button type="button" class="btn-mini resolver" data-accion="resolver" data-id="${item.id}">${texto}</button>`);
-  }
-  if (!cubierto && !yaFlageada) {
-    acciones.push(`<button type="button" class="btn-mini" data-accion="flagear" data-id="${item.id}">🚩 Marcar como "Ya no aplica / desactualizado"</button>`);
-  }
+  const resuelta = estaResuelta(item);
+  const estado = estadoVisual(item);
+  const yoReclame = !esLegado(item) && yaReclamoEsto(COLECCION_ID, item.id);
+  const yoConfirme = !esLegado(item) && yaConfirmoEntrega(COLECCION_ID, item.id);
 
   return `
-    <article class="tarjeta ${cubierto ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}">
+    <article class="tarjeta ${resuelta ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}">
       <div class="fila-top">
         <span class="etiqueta ${esPeticion ? 'peticion' : 'oferta'}">
           ${esPeticion ? '🙋 Necesito' : '🤝 Puedo ofrecer'}
@@ -48,8 +118,7 @@ function tarjetaHTML(item) {
         <span class="meta">${tiempoRelativo(item._fecha)}</span>
       </div>
       ${item.verificado ? '<span class="etiqueta verificado">✅ Fuente verificada</span>' : ''}
-      ${cubierto ? `<span class="etiqueta resuelto">✅ ${esPeticion ? 'Ya está cubierto' : 'Ya no disponible'}</span>` : ''}
-      ${desactualizada ? '<span class="etiqueta alerta">⚠️ Varias personas dicen que esto podría estar desactualizado</span>' : ''}
+      <span class="etiqueta ${estado.clase}">${estado.texto}</span>
       <p><strong>${escaparHTML(item.servicio || '')}</strong></p>
       <p>${escaparHTML(item.descripcion || '')}</p>
       <div class="meta">
@@ -59,8 +128,8 @@ function tarjetaHTML(item) {
           ? `<a class="contacto" href="${contacto.href}" target="_blank" rel="noopener">📞 ${escaparHTML(contacto.texto)}</a>`
           : contacto && contacto.texto ? `<span>📞 ${escaparHTML(contacto.texto)}</span>` : ''}
       </div>
-      ${yaFlageada && !cubierto ? '<p class="nota-flageada">Gracias, ya avisaste que esto podría estar desactualizado.</p>' : ''}
-      ${acciones.length ? `<div class="acciones-tarjeta">${acciones.join('')}</div>` : ''}
+      ${yoReclame && yoConfirme ? '<p class="nota-flageada" style="color:#9fe0ba">Ya confirmaste tu parte, ¡gracias por ayudar!</p>' : ''}
+      ${accionesHTML(item)}
     </article>`;
 }
 
@@ -70,7 +139,7 @@ function itemsFiltrados(items) {
     const pasaCategoria = filtroCategoria === 'todas' || it.categoria === filtroCategoria;
     const pasaZona = !filtroZona || String(it.zona || '').toLowerCase().includes(filtroZona);
     const desactualizada = (it.marcasDesactualizado || 0) >= UMBRAL_DESACTUALIZADO;
-    const pasaEstado = mostrarCubiertos || (it.estado !== 'cubierto' && !desactualizada);
+    const pasaEstado = mostrarResueltas || (!estaResuelta(it) && !desactualizada);
     const usuario = obtenerUsuarioActual();
     const pasaAutor = !soloMisPublicaciones || !!(usuario && it.autorEmail && it.autorEmail === usuario.email);
     const pasaVerificado = !soloVerificados || !!it.verificado;
@@ -112,8 +181,16 @@ export function iniciarListaYRealtimeComunidad() {
     const { accion, id } = boton.dataset;
     boton.disabled = true;
     try {
-      if (accion === 'resolver') {
-        await controlador.marcarEstado(id, 'cubierto');
+      if (accion === 'cancelar') {
+        await controlador.marcarEstado(id, 'cancelada');
+      } else if (accion === 'confirmar-atendida') {
+        await controlador.marcarEstado(id, 'atendida');
+      } else if (accion === 'tomar') {
+        await controlador.incrementarCampo(id, 'numAyudantes');
+        recordarReclamo(COLECCION_ID, id);
+      } else if (accion === 'confirmar-entrega') {
+        await controlador.incrementarCampo(id, 'numEntregas');
+        recordarConfirmacionEntrega(COLECCION_ID, id);
       } else if (accion === 'flagear') {
         await controlador.reportarDesactualizado(id);
         recordarMarcaDesactualizada(COLECCION_ID, id);
@@ -185,27 +262,32 @@ export function iniciarListaYRealtimeComunidad() {
     }
   });
 
-  // document.getElementById('toggle-solo-verificados-comunidad').addEventListener('change', (e) => {
-  //   soloVerificados = e.target.checked;
-  //   renderLista(itemsActuales);
-  // });
+  // const toggleVerificados = document.getElementById('toggle-solo-verificados-comunidad');
+  // if (toggleVerificados) {
+  //   toggleVerificados.addEventListener('change', (e) => {
+  //     soloVerificados = e.target.checked;
+  //     renderLista(itemsActuales);
+  //   });
+  // }
 
   document.getElementById('toggle-cubiertos-comunidad').addEventListener('change', (e) => {
-    mostrarCubiertos = e.target.checked;
+    mostrarResueltas = e.target.checked;
     renderLista(itemsActuales);
   });
 
   const filaMisPublicaciones = document.getElementById('fila-mis-comunidad');
-  // const toggleMisPublicaciones = document.getElementById('toggle-mis-comunidad');
-  // toggleMisPublicaciones.addEventListener('change', (e) => {
-  //   soloMisPublicaciones = e.target.checked;
-  //   renderLista(itemsActuales);
-  // });
+  const toggleMisPublicaciones = document.getElementById('toggle-mis-comunidad');
+  if (toggleMisPublicaciones) {
+    toggleMisPublicaciones.addEventListener('change', (e) => {
+      soloMisPublicaciones = e.target.checked;
+      renderLista(itemsActuales);
+    });
+  }
   document.addEventListener('auth-cambio', (e) => {
-    filaMisPublicaciones.hidden = !e.detail.usuario;
+    if (filaMisPublicaciones) filaMisPublicaciones.hidden = !e.detail.usuario;
     if (!e.detail.usuario) {
       soloMisPublicaciones = false;
-      // toggleMisPublicaciones.checked = false;
+      if (toggleMisPublicaciones) toggleMisPublicaciones.checked = false;
       renderLista(itemsActuales);
     }
   });
@@ -286,7 +368,9 @@ export function iniciarFormularioComunidad() {
           descripcion,
           zona,
           contacto,
-          estado: 'abierto'
+          estado: 'abierta',
+          numAyudantes: 0,
+          numEntregas: 0
         },
         {
           intentarVerificado: usuarioEsCuentaInstitucional(),

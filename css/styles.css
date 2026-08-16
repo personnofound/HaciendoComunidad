@@ -361,6 +361,13 @@ form.form-card .chip[aria-pressed="true"]{
 .tarjeta .etiqueta.oferta{background:rgba(46,139,87,.2); color:#9fe0ba}
 .tarjeta .etiqueta.alerta{background:rgba(217,164,65,.2); color:#f0d18c}
 .tarjeta .etiqueta.verificado{background:rgba(245,197,24,.18); color:#f5c518; border:1px solid #f5c518; font-weight:700}
+
+.tarjeta .etiqueta.disponible{background:rgba(46,139,87,.2); color:#9fe0ba}
+.tarjeta .etiqueta.en-atencion{background:rgba(217,164,65,.22); color:#f0d18c; border:1px solid rgba(217,164,65,.5)}
+.tarjeta .etiqueta.alta-demanda{background:rgba(155,89,182,.22); color:#d3a9f0; border:1px solid rgba(155,89,182,.5)}
+.tarjeta .etiqueta.atendida{background:rgba(46,139,87,.22); color:#9fe0ba; border:1px solid rgba(46,139,87,.5)}
+.tarjeta .etiqueta.cancelada{background:rgba(122,138,153,.2); color:var(--text-dim); border:1px solid var(--line)}
+.tarjeta .etiqueta.legado{background:rgba(122,138,153,.15); color:var(--text-dim); border:1px dashed var(--line)}
 .tarjeta .etiqueta-categoria{
   font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px;
   background:var(--panel-2); color:var(--text-dim); border:1px solid var(--line);
@@ -419,6 +426,8 @@ select.select-oscuro:focus{outline:2px solid var(--focus); outline-offset:1px}
 .tarjeta .foto-tarjeta{
   width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin:8px 0;
   border:1px solid var(--line); display:block; background:var(--panel-2);
+}
+.tarjeta .galeria-fotos{
   display:grid; grid-template-columns:repeat(auto-fit, minmax(90px, 1fr));
   gap:6px; margin:8px 0;
 }
@@ -426,6 +435,24 @@ select.select-oscuro:focus{outline:2px solid var(--focus); outline-offset:1px}
   width:100%; height:110px; object-fit:cover; border-radius:8px;
   border:1px solid var(--line); background:var(--panel-2); cursor:zoom-in;
 }
+
+.conteo-ayudantes{
+  background:var(--panel-2); border:1px solid var(--line); border-radius:8px;
+  padding:10px; margin:8px 0;
+}
+.conteo-ayudantes-fila{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  flex-wrap:wrap; margin-bottom:8px;
+}
+.conteo-ayudantes-numero{font-size:13px; font-weight:700; color:var(--text)}
+.chips-estado-operativo{display:flex; flex-wrap:wrap; gap:6px}
+.chip-mini{
+  font-size:11.5px; padding:5px 10px; border-radius:999px; cursor:pointer;
+  border:1px solid var(--line); background:var(--bg); color:var(--text-dim);
+}
+.chip-mini.activo.necesita-personas{background:rgba(192,57,43,.25); border-color:var(--urgent); color:#f3a79c}
+.chip-mini.activo.necesita-insumos{background:rgba(217,164,65,.25); border-color:var(--warn); color:#f0d18c}
+.chip-mini.activo.lleno{background:rgba(46,139,87,.25); border-color:var(--safe); color:#9fe0ba}
 
 /* Input de archivo (foto) */
 form.form-card input[type=file]{

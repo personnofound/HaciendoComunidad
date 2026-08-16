@@ -97,6 +97,8 @@ service cloud.firestore {
         esConteoValido(request.resource.data.fallecidos) &&
         esConteoValido(request.resource.data.desaparecidos) &&
         request.resource.data.estado == 'activo' &&
+        request.resource.data.personasAyudando == 0 &&
+        request.resource.data.estadoOperativo == '' &&
         request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90 &&
         request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180 &&
         request.resource.data.reportesAbuso == 0 &&
@@ -107,6 +109,20 @@ service cloud.firestore {
         soloCambioDeCampo('estado') &&
         resource.data.estado == 'activo' &&
         request.resource.data.estado == 'atendido'
+      ) || (
+        // Alguien se suma como "ayudando aquí" (conteo en vivo, sube de a 1).
+        soloCambioDeCampo('personasAyudando') &&
+        request.resource.data.personasAyudando == resource.data.personasAyudando + 1
+      ) || (
+        // Alguien deja de estar en el sitio (baja de a 1, nunca bajo 0).
+        soloCambioDeCampo('personasAyudando') &&
+        request.resource.data.personasAyudando == resource.data.personasAyudando - 1 &&
+        resource.data.personasAyudando > 0
+      ) || (
+        // Cualquiera puede actualizar el estado operativo del punto
+        // (necesita personas / necesita insumos / ya está lleno).
+        soloCambioDeCampo('estadoOperativo') &&
+        request.resource.data.estadoOperativo in ['necesita_personas', 'necesita_insumos', 'lleno', '']
       ) || esVotoDesactualizado() || esVotoAbuso();
 
       allow delete: if false;
@@ -155,15 +171,38 @@ service cloud.firestore {
         esTextoOpcionalValido(request.resource.data.descripcion, 300) &&
         esTextoOpcionalValido(request.resource.data.zona, 120) &&
         esTextoRequerido(request.resource.data.contacto, 120) &&
-        request.resource.data.estado == 'abierto' &&
+        request.resource.data.estado == 'abierta' &&
+        request.resource.data.numAyudantes == 0 &&
+        request.resource.data.numEntregas == 0 &&
         request.resource.data.reportesAbuso == 0 &&
         request.resource.data.marcasDesactualizado == 0 &&
         autoriaValida();
 
       allow update: if (
+        // Quien publicó cancela (ya no aplica / ya no hay disponibilidad).
         soloCambioDeCampo('estado') &&
-        resource.data.estado == 'abierto' &&
-        request.resource.data.estado == 'cubierto'
+        resource.data.estado == 'abierta' &&
+        request.resource.data.estado == 'cancelada'
+      ) || (
+        // Quien publicó confirma que ya se resolvió. Solo si alguien ya
+        // la había tomado antes (si nadie se ofreció, no hay nada que
+        // "confirmar" — en ese caso lo que aplica es cancelar).
+        soloCambioDeCampo('estado') &&
+        resource.data.estado == 'abierta' &&
+        request.resource.data.estado == 'atendida' &&
+        resource.data.numAyudantes > 0
+      ) || (
+        // Cualquiera puede "tomarla" (+1), mientras siga abierta. No hay
+        // límite de cuántas personas pueden tomarla — a propósito.
+        soloCambioDeCampo('numAyudantes') &&
+        resource.data.estado == 'abierta' &&
+        request.resource.data.numAyudantes == resource.data.numAyudantes + 1
+      ) || (
+        // Alguien que ya la tomó confirma que cumplió su parte (+1),
+        // nunca más veces que personas la hayan tomado.
+        soloCambioDeCampo('numEntregas') &&
+        request.resource.data.numEntregas == resource.data.numEntregas + 1 &&
+        request.resource.data.numEntregas <= resource.data.numAyudantes
       ) || esVotoDesactualizado() || esVotoAbuso();
 
       allow delete: if false;
