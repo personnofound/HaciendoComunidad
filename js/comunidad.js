@@ -25,6 +25,20 @@ function etiquetaCategoria(id) {
   return (CATEGORIAS_COMUNIDAD.find((c) => c.id === id) || { etiqueta: 'Otro' }).etiqueta;
 }
 
+function listaItemsHTML(item) {
+  if (!Array.isArray(item.items) || item.items.length === 0) return '';
+  const filas = item.items
+    .map((it) => {
+      const texto = escaparHTML(String(it.texto || ''));
+      const cantidad = typeof it.cantidad === 'number' && it.cantidad > 0
+        ? ` — ${it.cantidad}`
+        : ' — Cantidad no especificada';
+      return `<li>${texto}${cantidad}</li>`;
+    })
+    .join('');
+  return `<ul class="lista-items-comunidad">${filas}</ul>`;
+}
+
 function esLegado(item) {
   return item.numAyudantes === undefined || item.numEntregas === undefined;
 }
@@ -121,6 +135,7 @@ function tarjetaHTML(item) {
       <span class="etiqueta ${estado.clase}">${estado.texto}</span>
       <p><strong>${escaparHTML(item.servicio || '')}</strong></p>
       <p>${escaparHTML(item.descripcion || '')}</p>
+      ${listaItemsHTML(item)}
       <div class="meta">
         <span class="etiqueta-categoria">${escaparHTML(etiquetaCategoria(item.categoria))}</span>
         ${item.zona ? `<span>🏘️ ${escaparHTML(item.zona)}</span>` : ''}
@@ -325,6 +340,66 @@ export function iniciarFormularioComunidad() {
     });
   });
 
+  const MAX_ITEMS = 10;
+  const contItems = document.getElementById('items-comunidad');
+  const btnAgregarItem = document.getElementById('btn-agregar-item-comunidad');
+
+  function actualizarBotonAgregarItem() {
+    const cantidadFilas = contItems.querySelectorAll('.fila-item-comunidad').length;
+    btnAgregarItem.hidden = cantidadFilas >= MAX_ITEMS;
+  }
+
+  function crearFilaItem() {
+    const fila = document.createElement('div');
+    fila.className = 'fila-item-comunidad';
+    fila.innerHTML = `
+      <input type="text" class="item-texto" maxlength="100" placeholder="Ej: Agua embotellada">
+      <input type="number" class="item-cantidad" min="0" max="99999" step="1" placeholder="Cant.">
+      <button type="button" class="btn-quitar-item" aria-label="Quitar este ítem">✕</button>
+    `;
+    fila.querySelector('.btn-quitar-item').addEventListener('click', () => {
+      fila.remove();
+      actualizarBotonAgregarItem();
+    });
+    return fila;
+  }
+
+  function reiniciarFilasItems() {
+    contItems.innerHTML = '';
+    contItems.appendChild(crearFilaItem());
+    actualizarBotonAgregarItem();
+  }
+
+  reiniciarFilasItems();
+
+  btnAgregarItem.addEventListener('click', () => {
+    contItems.appendChild(crearFilaItem());
+    actualizarBotonAgregarItem();
+  });
+
+  function leerItems() {
+    const filas = Array.from(contItems.querySelectorAll('.fila-item-comunidad'));
+    const items = [];
+    for (const fila of filas) {
+      const texto = limpiarTexto(fila.querySelector('.item-texto').value, 100);
+      const cantidadCruda = fila.querySelector('.item-cantidad').value.trim();
+      if (!texto && !cantidadCruda) continue; // fila vacía, se ignora
+      if (!texto) {
+        throw new Error('Cada ítem necesita una descripción (qué es).');
+      }
+      let cantidad = 0;
+      if (cantidadCruda !== '') {
+        const numero = Number(cantidadCruda);
+        if (!Number.isInteger(numero) || numero < 0 || numero > 99999) {
+          throw new Error(`La cantidad de "${texto}" debe ser un número entero de 0 en adelante.`);
+        }
+        cantidad = numero;
+      }
+      items.push({ texto, cantidad });
+    }
+    return items;
+  }
+
   const form = document.getElementById('form-comunidad');
   const msg = document.getElementById('msg-form-comunidad');
 
@@ -348,6 +423,16 @@ export function iniciarFormularioComunidad() {
       msg.classList.add('error');
       return;
     }
+
+    let items;
+    try {
+      items = leerItems();
+    } catch (errItems) {
+      msg.textContent = errItems.message;
+      msg.classList.add('error');
+      return;
+    }
+
     const cooldown = puedeEnviar('comunidad');
     if (!cooldown.ok) {
       msg.textContent = `Espera ${cooldown.segundosRestantes}s antes de publicar otra vez.`;
@@ -366,6 +451,7 @@ export function iniciarFormularioComunidad() {
           categoria: categoriaSeleccionada,
           servicio,
           descripcion,
+          items,
           zona,
           contacto,
           estado: 'abierta',
@@ -382,6 +468,7 @@ export function iniciarFormularioComunidad() {
       msg.textContent = 'Publicado. Gracias por sumarte a la comunidad.';
       msg.classList.add('ok');
       form.reset();
+      reiniciarFilasItems();
       chipsCat.forEach((c) => c.setAttribute('aria-pressed', 'false'));
       categoriaSeleccionada = null;
       chipsTipo.forEach((c) => c.setAttribute('aria-pressed', 'false'));

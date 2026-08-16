@@ -26,6 +26,10 @@ service cloud.firestore {
       return valor is list && valor.size() <= 3;
     }
 
+    function esListaItemsValida(valor) {
+      return valor is list && valor.size() <= 10;
+    }
+
     function timestampEsDelServidor() {
       return request.resource.data.timestamp == request.time;
     }
@@ -169,6 +173,7 @@ service cloud.firestore {
         esTextoValido(request.resource.data.categoria, 40) &&
         esTextoRequerido(request.resource.data.servicio, 100) &&
         esTextoOpcionalValido(request.resource.data.descripcion, 300) &&
+        esListaItemsValida(request.resource.data.items) &&
         esTextoOpcionalValido(request.resource.data.zona, 120) &&
         esTextoRequerido(request.resource.data.contacto, 120) &&
         request.resource.data.estado == 'abierta' &&

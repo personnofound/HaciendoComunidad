@@ -436,6 +436,27 @@ select.select-oscuro:focus{outline:2px solid var(--focus); outline-offset:1px}
   border:1px solid var(--line); background:var(--panel-2); cursor:zoom-in;
 }
 
+.items-comunidad{display:flex; flex-direction:column; gap:8px; margin-bottom:8px}
+.fila-item-comunidad{display:flex; gap:8px; align-items:center}
+form.form-card .fila-item-comunidad input.item-texto{width:auto; flex:1 1 auto; min-width:0}
+form.form-card .fila-item-comunidad input.item-cantidad{width:88px; flex:0 0 88px; text-align:center}
+.fila-item-comunidad .btn-quitar-item{
+  flex-shrink:0; width:34px; height:34px; border-radius:8px;
+  border:1px solid var(--line); background:var(--panel-2); color:var(--text-dim);
+  cursor:pointer; font-size:14px;
+}
+.fila-item-comunidad .btn-quitar-item:hover{color:var(--urgent); border-color:var(--urgent)}
+.btn-agregar-item{
+  font-size:13px; font-weight:600; padding:7px 14px; border-radius:8px;
+  border:1px dashed var(--info); background:transparent; color:var(--info); cursor:pointer;
+}
+.btn-agregar-item:hover{background:rgba(59,130,196,.1)}
+
+.lista-items-comunidad{
+  margin:8px 0; padding-left:18px; font-size:13px; color:var(--text);
+}
+.lista-items-comunidad li{margin-bottom:2px}
+
 .conteo-ayudantes{
   background:var(--panel-2); border:1px solid var(--line); border-radius:8px;
   padding:10px; margin:8px 0;
