@@ -1,68 +1,61 @@
 // js/aviso.js
-
+//
+// Publica los avisos definidos en js/avisos-config.js que estén vigentes
+// en este momento (según su día/hora/fecha) en la campanita de
+// notificaciones, en vez de un banner propio arriba de la pantalla.
+//
 import { AVISOS, avisosActivosAhora } from './avisos-config.js';
 import { escaparHTML } from './utils.js';
+import { publicarNotificacion, retirarNotificacion } from './notificaciones.js';
 
 const MINUTO_MS = 60 * 1000;
 
 function claveDismiss(aviso, ahora) {
   const fecha = ahora.toISOString().slice(0, 10);
+  // La clave incluye la fecha de hoy: si lo cierran, no vuelve a molestar
+  // el resto del día, pero reaparece solo en la próxima fecha en que el
+  // aviso esté programado (ej: el próximo día de pico y placa).
   return `aviso_cerrado_${aviso.id}_${fecha}`;
 }
 
-function avisoHTML(aviso) {
-  const enlace = aviso.link
-    ? `<a class="franja-aviso-link" href="${escaparHTML(aviso.link)}" target="_blank" rel="noopener noreferrer">${escaparHTML(aviso.textoLink || '🔗 Ver noticia completa')}</a>`
-    : '';
-  return `
-    <div class="franja-aviso" data-id="${escaparHTML(aviso.id)}">
-      <span class="franja-aviso-icono" aria-hidden="true">📣</span>
-      <div class="franja-aviso-texto">
-        <strong>${escaparHTML(aviso.titulo)}</strong>
-        <p>${escaparHTML(aviso.mensaje)}</p>
-        ${enlace}
-      </div>
-      <button type="button" class="btn-cerrar-aviso" aria-label="Cerrar aviso">✕</button>
-    </div>`;
+function idNotificacion(aviso) {
+  return `aviso-${aviso.id}`;
 }
 
-function render() {
-  const cont = document.getElementById('contenedor-avisos');
-  if (!cont) return;
+function publicarAvisoEnCampana(aviso) {
+  const notifId = idNotificacion(aviso);
+  const enlace = aviso.link
+    ? `<a class="item-notificacion-btn" href="${escaparHTML(aviso.link)}" target="_blank" rel="noopener noreferrer">${escaparHTML(aviso.textoLink || '🔗 Ver noticia completa')}</a>`
+    : '';
 
+  publicarNotificacion({
+    id: notifId,
+    icono: '📣',
+    titulo: escaparHTML(aviso.titulo),
+    mensaje: escaparHTML(aviso.mensaje),
+    accionHTML: enlace,
+    onCerrar: () => localStorage.setItem(claveDismiss(aviso, new Date()), '1')
+  });
+}
+
+function actualizar() {
   const ahora = new Date();
   const activos = avisosActivosAhora(ahora).filter(
     (aviso) => !localStorage.getItem(claveDismiss(aviso, ahora))
   );
+  const idsActivos = new Set(activos.map(idNotificacion));
 
-  if (activos.length === 0) {
-    cont.innerHTML = '';
-    cont.hidden = true;
-    return;
-  }
+  activos.forEach(publicarAvisoEnCampana);
 
-  cont.hidden = false;
-  cont.innerHTML = activos.map(avisoHTML).join('');
+  // Si un aviso ya no está vigente (cambió la hora/día), se retira solo
+  // de la campanita aunque nadie lo haya cerrado a mano.
+  AVISOS.forEach((aviso) => {
+    const notifId = idNotificacion(aviso);
+    if (!idsActivos.has(notifId)) retirarNotificacion(notifId);
+  });
 }
 
 export function iniciarAviso() {
-  const cont = document.getElementById('contenedor-avisos');
-  if (!cont) return;
-
-  render();
-
-  cont.addEventListener('click', (e) => {
-    const boton = e.target.closest('.btn-cerrar-aviso');
-    if (!boton) return;
-    const caja = boton.closest('.franja-aviso');
-    const id = caja.dataset.id;
-    const aviso = AVISOS.find((a) => a.id === id);
-    if (aviso) {
-      localStorage.setItem(claveDismiss(aviso, new Date()), '1');
-    }
-    caja.remove();
-    if (!cont.querySelector('.franja-aviso')) cont.hidden = true;
-  });
-
-  setInterval(render, MINUTO_MS);
+  actualizar();
+  setInterval(actualizar, MINUTO_MS);
 }

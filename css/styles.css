@@ -14,6 +14,24 @@
   --focus: #ffd166;
 }
 
+/* Modo claro (opcional, oscuro sigue siendo el de por defecto) */
+body.tema-claro{
+  --bg: #f4f1ea;
+  --panel: #ffffff;
+  --panel-2: #eef1f4;
+  --line: #d8dde3;
+  --text: #1a2430;
+  --text-dim: #5b6b7a;
+  --urgent: #c0392b;
+  --urgent-2: #e05a45;
+  --safe: #237a4b;
+  --info: #2b6ca3;
+  --warn: #a9721a;
+  --focus: #b8860b;
+}
+body.tema-claro .leaflet-popup-content-wrapper{background:#fff; color:#1a2430}
+body.tema-claro .leaflet-popup-tip{background:#fff}
+
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
@@ -92,61 +110,83 @@ header.top h1 small{display:block; font-weight:400; font-size:11px; color:var(--
 #btn-logout-admin:hover{color:var(--text)}
 
 
-/* ---------- Tabs ---------- */
-#contenedor-avisos[hidden]{display:none}
-.franja-aviso{
-  background:linear-gradient(180deg, #3a2f1a, #2b2413);
-  border-bottom:1px solid var(--warn);
-  padding:10px 14px;
-  display:flex; align-items:flex-start; gap:10px;
+/* ---------- Campanita de notificaciones ---------- */
+.campana-notificaciones{position:relative}
+.btn-campana{
+  position:relative; background:none; border:1px solid var(--line);
+  border-radius:999px; width:34px; height:34px; font-size:16px;
+  color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center;
 }
-.franja-aviso-icono{font-size:18px; line-height:1; flex-shrink:0; margin-top:1px}
-.franja-aviso-texto{flex:1; min-width:0}
-.franja-aviso-texto strong{
-  display:block; font-size:13px; color:var(--warn); margin-bottom:2px;
+.btn-campana:hover{background:var(--panel-2)}
+.badge-notificaciones{
+  position:absolute; top:-4px; right:-4px; background:var(--urgent); color:#fff;
+  font-size:10px; font-weight:700; min-width:16px; height:16px; border-radius:999px;
+  display:flex; align-items:center; justify-content:center; padding:0 3px;
+  border:2px solid var(--panel);
 }
-.franja-aviso-texto p{
-  margin:0; font-size:13px; color:var(--text); line-height:1.4;
-  word-wrap:break-word;
-}
-.franja-aviso-link{
-  display:inline-block; margin-top:6px; font-size:12.5px; font-weight:600;
-  color:var(--warn); text-decoration:underline; text-underline-offset:2px;
-}
-.franja-aviso-link:hover{color:#f0d18c}
-.franja-aviso .btn-cerrar-aviso{
-  background:none; border:none; color:var(--text-dim); font-size:16px;
-  cursor:pointer; padding:2px 6px; flex-shrink:0; line-height:1;
-}
-.franja-aviso .btn-cerrar-aviso:hover{color:var(--text)}
+.badge-notificaciones[hidden]{display:none}
 
-#contenedor-sismo[hidden]{display:none}
-.franja-sismo{
-  padding:10px 14px;
-  display:flex; align-items:flex-start; gap:10px;
-  border-bottom:2px solid;
+.panel-notificaciones{
+  position:fixed; top:58px; right:10px; z-index:70;
+  width:min(340px, 92vw); max-height:70vh; overflow-y:auto;
+  background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.4);
 }
-.franja-sismo.sismo-moderado{
-  background:linear-gradient(180deg, #3a2f1a, #2b2413);
-  border-color:var(--warn);
+.panel-notificaciones[hidden]{display:none}
+.panel-notificaciones-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 14px; border-bottom:1px solid var(--line);
+  position:sticky; top:0; background:var(--panel);
 }
-.franja-sismo.sismo-fuerte{
-  background:linear-gradient(180deg, #3a1a1a, #2b1313);
-  border-color:var(--urgent);
+.panel-notificaciones-header strong{font-size:14px}
+#btn-cerrar-panel-notificaciones{
+  background:none; border:none; color:var(--text-dim); font-size:16px; cursor:pointer; padding:2px 6px;
 }
-.franja-sismo-icono{font-size:20px; line-height:1; flex-shrink:0; margin-top:1px}
-.franja-sismo-texto{flex:1; min-width:0}
-.franja-sismo-texto strong{display:block; font-size:13.5px; color:var(--text); margin-bottom:2px}
-.sismo-fuerte .franja-sismo-texto strong{color:#f3a79c}
-.sismo-moderado .franja-sismo-texto strong{color:var(--warn)}
-.franja-sismo-texto p{margin:0 0 6px; font-size:12.5px; color:var(--text-dim); line-height:1.4}
-.franja-sismo-btn-mapa{
-  font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px;
-  border:none; cursor:pointer;
+.panel-notificaciones-vacio{
+  padding:24px 14px; text-align:center; font-size:13px; color:var(--text-dim); margin:0;
 }
-.sismo-fuerte .franja-sismo-btn-mapa{background:var(--urgent); color:#fff}
-.sismo-moderado .franja-sismo-btn-mapa{background:var(--warn); color:#2b2413}
 
+.panel-notificaciones-pie{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:10px 14px; border-top:1px solid var(--line);
+  position:sticky; bottom:0; background:var(--panel);
+  font-size:12px; color:var(--text-dim);
+}
+.interruptor-tema{position:relative; display:inline-block; width:38px; height:22px; flex-shrink:0}
+.interruptor-tema input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer}
+.interruptor-tema-riel{
+  position:absolute; inset:0; background:var(--line); border-radius:999px; transition:background .15s;
+}
+.interruptor-tema-riel::before{
+  content:''; position:absolute; top:2px; left:2px; width:18px; height:18px;
+  background:#fff; border-radius:50%; transition:transform .15s;
+}
+.interruptor-tema input:checked + .interruptor-tema-riel{background:var(--info)}
+.interruptor-tema input:checked + .interruptor-tema-riel::before{transform:translateX(16px)}
+
+.item-notificacion{
+  display:flex; align-items:flex-start; gap:10px;
+  padding:12px 14px; border-bottom:1px solid var(--line);
+}
+.item-notificacion:last-child{border-bottom:none}
+.item-notificacion.sismo-fuerte{background:rgba(192,57,43,.08)}
+.item-notificacion.sismo-moderado{background:rgba(217,164,65,.08)}
+.item-notificacion-icono{font-size:18px; line-height:1; flex-shrink:0; margin-top:1px}
+.item-notificacion-texto{flex:1; min-width:0}
+.item-notificacion-texto strong{display:block; font-size:13px; color:var(--text); margin-bottom:2px}
+.item-notificacion-texto p{margin:0; font-size:12.5px; color:var(--text-dim); line-height:1.4}
+.item-notificacion-btn{
+  display:inline-block; margin-top:8px; font-size:12px; font-weight:700;
+  padding:6px 12px; border-radius:999px; border:none; cursor:pointer;
+  background:var(--info); color:#fff; text-decoration:none;
+}
+.item-notificacion-cerrar{
+  background:none; border:none; color:var(--text-dim); font-size:14px;
+  cursor:pointer; padding:2px 4px; flex-shrink:0; line-height:1;
+}
+.item-notificacion-cerrar:hover{color:var(--text)}
+
+/* Marca de sismo en el mapa (no es un reporte comunitario, ver mapa.js) */
 .icono-sismo{position:relative}
 .punto-sismo{
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -158,11 +198,6 @@ header.top h1 small{display:block; font-weight:400; font-size:11px; color:var(--
   background:rgba(192,57,43,.45);
   animation:pulso-sismo-anim 1.6s ease-out infinite;
 }
-.franja-sismo .btn-cerrar-aviso{
-  background:none; border:none; color:var(--text-dim); font-size:16px;
-  cursor:pointer; padding:2px 6px; flex-shrink:0; line-height:1;
-}
-.franja-sismo .btn-cerrar-aviso:hover{color:var(--text)}
 @keyframes pulso-sismo-anim{
   0%{ transform:translate(-50%,-50%) scale(0.4); opacity:.9; }
   100%{ transform:translate(-50%,-50%) scale(2.2); opacity:0; }
@@ -182,7 +217,14 @@ nav.tabs button{
 }
 nav.tabs button.active{color:var(--text); border-bottom-color:var(--urgent)}
 
-main{max-width:900px; margin:0 auto; padding:14px 14px 90px}
+main{margin:0 auto; padding:14px 14px 90px}
+
+/* El mapa aprovecha todo el ancho de la pantalla; las demás secciones
+   (Necesito/Ofrezco ayuda, Desaparecidos) se quedan angostas para que el
+   texto siga siendo cómodo de leer, con el mismo límite que antes. */
+main > .vista:not(#vista-mapa){max-width:900px; margin:0 auto}
+#vista-mapa > h2.titulo-vista,
+#vista-mapa > p.subtitulo-vista{max-width:900px}
 
 section.vista{display:none}
 section.vista.active{display:block}
@@ -191,6 +233,45 @@ h2.titulo-vista{font-size:18px; margin:6px 0 4px}
 p.subtitulo-vista{color:var(--text-dim); font-size:13px; margin:0 0 14px}
 
 /* ---------- Mapa ---------- */
+
+/* Grid: en celular es una sola columna (botón, mapa, resumen, lista);
+   en pantallas anchas se parte en 2 columnas: izquierda = resumen + mapa
+   (el mapa queda "flotando" con position:sticky mientras se hace scroll
+   por la lista larga de la derecha), derecha = botón + lista de reportes. */
+.mapa-grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "boton"
+    "mapa"
+    "resumen"
+    "lista";
+  gap:4px;
+  max-width:1600px;
+  margin:0 auto;
+}
+.mg-boton{grid-area:boton}
+.mg-mapa{grid-area:mapa}
+.mg-resumen{grid-area:resumen}
+.mg-lista{grid-area:lista}
+
+@media (min-width:900px){
+  .mapa-grid{
+    grid-template-columns: minmax(340px, 1fr) minmax(400px, 1.3fr);
+    grid-template-rows: auto auto auto;
+    align-items:start;
+    gap:20px;
+    /* El mapa ocupa las 3 filas de su columna de una sola vez, así su
+       altura no depende de la del botón ni la del resumen — evita el
+       hueco vacío que quedaba antes entre el botón y la lista. */
+    grid-template-areas:
+      "mapa boton"
+      "mapa resumen"
+      "mapa lista";
+  }
+  .mg-mapa{position:sticky; top:66px}
+}
+
 #mapa{
   width:100%; height:340px; border-radius:var(--radius);
   border:1px solid var(--line); margin-bottom:12px;
@@ -199,6 +280,9 @@ p.subtitulo-vista{color:var(--text-dim); font-size:13px; margin:0 0 14px}
     así los controles internos de Leaflet (z-index hasta 1000) nunca quedan
     por encima de elementos fuera del mapa, como el modal */
   isolation:isolate;
+}
+@media (min-width:900px){
+  #mapa{height:min(60vh, 520px)}
 }
 .leyenda-mapa{
   display:flex; flex-wrap:wrap; gap:8px 14px; font-size:12px; color:var(--text-dim);
@@ -312,6 +396,38 @@ form.form-card .chip[aria-pressed="true"]{
 .msg-form.error{color:#f3897d}
 .msg-form.ok{color:#8fd6a8}
 
+/* Botón grande "➕ Agregar ayuda" (Mapa y Comunidad) */
+.btn-grande{
+  font-size:16px; padding:16px; margin-bottom:16px;
+  box-shadow:0 4px 14px rgba(192,57,43,.35);
+}
+
+/* Botón chico tipo chip para publicar (Desaparecidos) */
+.chip-agregar{
+  border:1px solid var(--urgent); background:rgba(192,57,43,.12); color:#f3a79c;
+  padding:9px 16px; border-radius:999px; cursor:pointer; font-size:14px; font-weight:700;
+  margin-bottom:16px;
+}
+.chip-agregar:hover{background:rgba(192,57,43,.2)}
+
+/* Botón "🔍 Filtros" colapsable */
+.btn-filtros{
+  display:flex; align-items:center; gap:6px;
+  background:var(--panel); border:1px solid var(--line); border-radius:8px;
+  padding:9px 14px; margin-bottom:10px; color:var(--text-dim);
+  font-size:13px; font-weight:600; cursor:pointer;
+}
+.btn-filtros.activo{color:var(--text); border-color:var(--info)}
+.btn-filtros-flecha{transition:transform .15s}
+.btn-filtros.activo .btn-filtros-flecha{transform:rotate(180deg)}
+.filtros-colapsables{
+  background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:12px; margin-bottom:14px;
+}
+.filtros-colapsables[hidden]{display:none}
+.filtros-colapsables .filtro-inline:last-child,
+.filtros-colapsables .filtro-localidad:last-child{margin-bottom:0}
+
 /* ---------- Listas ---------- */
 .lista-cabecera{
   display:flex; align-items:center; justify-content:space-between; margin:18px 0 8px;
@@ -377,6 +493,32 @@ form.form-card .chip[aria-pressed="true"]{
   border-color:#f5c518;
   box-shadow:0 0 0 1px rgba(245,197,24,.35);
 }
+.tarjeta.seleccionada{
+  border-color:var(--info);
+  box-shadow:0 0 0 3px rgba(59,130,196,.35);
+  animation:destello-seleccion 1s ease-in-out 1;
+}
+@keyframes destello-seleccion{
+  0%, 100%{background:var(--panel)}
+  40%{background:rgba(59,130,196,.15)}
+}
+
+/* Coordenadas/localidad clicables dentro de la meta de una tarjeta */
+.tarjeta .meta button.meta-clic,
+.tarjeta .meta a.meta-clic{
+  font:inherit; background:none; border:none; padding:0; margin:0;
+  color:var(--text-dim); cursor:pointer; text-decoration:underline;
+  text-decoration-style:dotted; text-underline-offset:3px;
+}
+.tarjeta .meta button.meta-clic:hover,
+.tarjeta .meta a.meta-clic:hover{color:var(--info)}
+
+.popup-btn-detalles{
+  display:block; width:100%; margin-top:6px; font-size:12px; font-weight:700;
+  padding:6px 10px; border-radius:6px; border:none; cursor:pointer;
+  background:var(--info); color:#fff;
+}
+
 .tarjeta .acciones-tarjeta{
   display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;
   padding-top:10px; border-top:1px solid var(--line);
@@ -512,6 +654,22 @@ form.form-card input[type=file]{
 @media (min-width:560px){
   .modal-fondo{align-items:center}
   .modal-caja{border-radius:16px}
+}
+
+/* Modal del tutorial de bienvenida */
+.tutorial-caja{text-align:center; max-width:380px}
+.tutorial-icono{font-size:42px; margin-bottom:10px}
+.tutorial-titulo{font-size:18px; margin:0 0 10px}
+.tutorial-texto{font-size:14px; color:var(--text-dim); line-height:1.5; margin:0 0 18px}
+.tutorial-puntos{display:flex; justify-content:center; gap:6px; margin-bottom:18px}
+.tutorial-punto{width:7px; height:7px; border-radius:50%; background:var(--line)}
+.tutorial-punto.activo{background:var(--urgent); width:18px; border-radius:4px}
+.tutorial-botones{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.tutorial-botones-nav{display:flex; gap:8px}
+.tutorial-botones-nav .btn{width:auto; padding:9px 16px; font-size:13px}
+.btn-saltar-tutorial{
+  background:none; border:none; color:var(--text-dim); font-size:13px;
+  cursor:pointer; text-decoration:underline; text-underline-offset:2px;
 }
 
 .leaflet-popup-content-wrapper{background:var(--panel); color:var(--text)}

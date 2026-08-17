@@ -9,6 +9,7 @@ import {
   obtenerUbicacionPorGPS
 } from './utils.js';
 import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
+import { validarFotos, subirFotos } from './fotos.js';
 
 const controlador = crearControladorDatos(COLECCIONES.comunidad);
 const COLECCION_ID = COLECCIONES.comunidad;
@@ -37,6 +38,17 @@ function listaItemsHTML(item) {
     })
     .join('');
   return `<ul class="lista-items-comunidad">${filas}</ul>`;
+}
+
+function galeriaFotosHTML(item) {
+  const urls = Array.isArray(item.fotos) ? item.fotos : [];
+  if (urls.length === 0) return '';
+  if (urls.length === 1) {
+    return `<img class="foto-tarjeta" src="${escaparHTML(urls[0])}" alt="Foto de la publicación" loading="lazy">`;
+  }
+  return `<div class="galeria-fotos">${urls
+    .map((u) => `<img src="${escaparHTML(u)}" alt="Foto de la publicación" loading="lazy">`)
+    .join('')}</div>`;
 }
 
 function esLegado(item) {
@@ -136,6 +148,7 @@ function tarjetaHTML(item) {
       <p><strong>${escaparHTML(item.servicio || '')}</strong></p>
       <p>${escaparHTML(item.descripcion || '')}</p>
       ${listaItemsHTML(item)}
+      ${galeriaFotosHTML(item)}
       <div class="meta">
         <span class="etiqueta-categoria">${escaparHTML(etiquetaCategoria(item.categoria))}</span>
         ${item.zona ? `<span>🏘️ ${escaparHTML(item.zona)}</span>` : ''}
@@ -334,20 +347,28 @@ export function iniciarListaYRealtimeComunidad() {
   });
 
   const filaMisPublicaciones = document.getElementById('fila-mis-comunidad');
-  const toggleMisPublicaciones = document.getElementById('toggle-mis-comunidad');
-  if (toggleMisPublicaciones) {
-    toggleMisPublicaciones.addEventListener('change', (e) => {
-      soloMisPublicaciones = e.target.checked;
-      renderLista(itemsActuales);
-    });
-  }
+  // const toggleMisPublicaciones = document.getElementById('toggle-mis-comunidad');
+  // if (toggleMisPublicaciones) {
+  //   toggleMisPublicaciones.addEventListener('change', (e) => {
+  //     soloMisPublicaciones = e.target.checked;
+  //     renderLista(itemsActuales);
+  //   });
+  // }
   document.addEventListener('auth-cambio', (e) => {
     if (filaMisPublicaciones) filaMisPublicaciones.hidden = !e.detail.usuario;
     if (!e.detail.usuario) {
       soloMisPublicaciones = false;
-      if (toggleMisPublicaciones) toggleMisPublicaciones.checked = false;
       renderLista(itemsActuales);
     }
+  });
+
+  // --- Botón grande "➕ Agregar ayuda" que abre el modal ---
+  const modal = document.getElementById('modal-comunidad');
+  document.getElementById('btn-abrir-form-comunidad').addEventListener('click', () => {
+    modal.hidden = false;
+  });
+  document.getElementById('btn-cerrar-modal-comunidad').addEventListener('click', () => {
+    modal.hidden = true;
   });
 }
 
@@ -381,6 +402,23 @@ export function iniciarFormularioComunidad() {
       chip.setAttribute('aria-pressed', 'true');
       categoriaSeleccionada = chip.dataset.categoria;
     });
+  });
+
+  const inputFoto = document.getElementById('foto-comunidad');
+  const msgFoto = document.getElementById('msg-foto-comunidad');
+  inputFoto.addEventListener('change', () => {
+    const archivos = inputFoto.files;
+    const resultado = validarFotos(archivos);
+    if (!resultado.ok) {
+      msgFoto.textContent = resultado.error;
+      msgFoto.classList.add('error');
+      inputFoto.value = '';
+    } else {
+      msgFoto.textContent = archivos.length
+        ? `${archivos.length} foto${archivos.length === 1 ? '' : 's'} lista${archivos.length === 1 ? '' : 's'}: ${Array.from(archivos).map((a) => a.name).join(', ')}`
+        : '';
+      msgFoto.classList.remove('error');
+    }
   });
 
   const MAX_ITEMS = 10;
@@ -476,6 +514,14 @@ export function iniciarFormularioComunidad() {
       return;
     }
 
+    const archivos = inputFoto.files;
+    const validacionFoto = validarFotos(archivos);
+    if (!validacionFoto.ok) {
+      msg.textContent = validacionFoto.error;
+      msg.classList.add('error');
+      return;
+    }
+
     const cooldown = puedeEnviar('comunidad');
     if (!cooldown.ok) {
       msg.textContent = `Espera ${cooldown.segundosRestantes}s antes de publicar otra vez.`;
@@ -487,6 +533,12 @@ export function iniciarFormularioComunidad() {
     btn.disabled = true;
     btn.textContent = 'Publicando…';
     try {
+      let fotos = [];
+      if (archivos.length) {
+        btn.textContent = `Subiendo ${archivos.length} foto${archivos.length === 1 ? '' : 's'}…`;
+        fotos = await subirFotos(archivos, 'comunidad_servicios');
+        btn.textContent = 'Publicando…';
+      }
       const usuario = obtenerUsuarioActual();
       const ref = await controlador.crearConAutoria(
         {
@@ -495,6 +547,7 @@ export function iniciarFormularioComunidad() {
           servicio,
           descripcion,
           items,
+          fotos,
           zona,
           contacto,
           estado: 'abierta',
@@ -511,12 +564,16 @@ export function iniciarFormularioComunidad() {
       msg.textContent = 'Publicado. Gracias por sumarte a la comunidad.';
       msg.classList.add('ok');
       form.reset();
+      msgFoto.textContent = '';
       reiniciarFilasItems();
       chipsCat.forEach((c) => c.setAttribute('aria-pressed', 'false'));
       categoriaSeleccionada = null;
       chipsTipo.forEach((c) => c.setAttribute('aria-pressed', 'false'));
       document.querySelector('#chips-tipo-publicacion .chip[data-tipo-publicacion="peticion"]').setAttribute('aria-pressed', 'true');
       tipoPublicacion = 'peticion';
+      setTimeout(() => {
+        document.getElementById('modal-comunidad').hidden = true;
+      }, 1200);
     } catch (err) {
       console.error(err);
       msg.textContent = 'No se pudo publicar. Revisa tu conexión e intenta de nuevo.';

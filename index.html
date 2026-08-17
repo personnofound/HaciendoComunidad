@@ -31,6 +31,30 @@
   </div>
   <div class="acciones-header">
     <span id="estado-conexion">Conectando…</span>
+
+    <div class="campana-notificaciones">
+      <button type="button" id="btn-campana" class="btn-campana" aria-label="Ver notificaciones">
+        🔔<span id="badge-notificaciones" class="badge-notificaciones" hidden>0</span>
+      </button>
+      <div id="panel-notificaciones" class="panel-notificaciones" hidden>
+        <div class="panel-notificaciones-header">
+          <strong>Notificaciones</strong>
+          <button type="button" id="btn-cerrar-panel-notificaciones" aria-label="Cerrar notificaciones">✕</button>
+        </div>
+        <div id="lista-notificaciones">
+          <p class="panel-notificaciones-vacio">No hay notificaciones por ahora.</p>
+        </div>
+        <div class="panel-notificaciones-pie">
+          <span>🌙 Modo oscuro</span>
+          <label class="interruptor-tema">
+            <input type="checkbox" id="toggle-tema-claro">
+            <span class="interruptor-tema-riel"></span>
+          </label>
+          <span>☀️ Modo claro</span>
+        </div>
+      </div>
+    </div>
+
     <button type="button" id="btn-login-admin" class="btn-auth" title="Acceso autorizado">
       🔐 Personal Autorizado
     </button>
@@ -41,61 +65,69 @@
   </div>
 </header>
 
-<div id="contenedor-sismo" hidden></div>
-
-<div id="contenedor-instalar" hidden></div>
-
-<div id="contenedor-avisos" hidden></div>
-
 <nav class="tabs" aria-label="Secciones">
-  <button class="active" data-vista="vista-mapa">🆘 Mapa de ayuda</button>
+  <button class="active" data-vista="vista-comunidad">🤝 Necesito / Ofrezco ayuda</button>
+  <button data-vista="vista-mapa">🗺️ Mapa de puntos críticos</button>
   <button data-vista="vista-desaparecidos">🔎 Desaparecidos</button>
-  <button data-vista="vista-comunidad">🤝 Comunidad</button>
 </nav>
 
 <main>
 
   <!-- ===================== MAPA DE AYUDA ===================== -->
-  <section id="vista-mapa" class="vista active">
-    <h2 class="titulo-vista">Mapa de ayuda</h2>
+  <section id="vista-mapa" class="vista">
+    <h2 class="titulo-vista">Mapa de puntos críticos</h2>
     <p class="subtitulo-vista">Toca cualquier punto del mapa donde alguien necesita ayuda para reportarlo. Se publica de inmediato para todos.</p>
 
-    <div id="mapa" role="application" aria-label="Mapa para reportar dónde se necesita ayuda"></div>
+    <div class="mapa-grid">
+      <div class="mg-boton">
+        <button type="button" class="btn btn-primario btn-grande" id="btn-abrir-reporte-manual">
+          ➕ Reportar puntos críticos
+        </button>
+      </div>
 
-    <div class="leyenda-mapa" id="leyenda-mapa"></div>
+      <div class="mg-mapa">
+        <div id="mapa" role="application" aria-label="Mapa para reportar dónde se necesita ayuda"></div>
+        <div class="leyenda-mapa" id="leyenda-mapa"></div>
+      </div>
 
-    <button type="button" class="btn btn-secundario" id="btn-abrir-reporte-manual" style="width:100%; margin-bottom:10px">
-      📍 Reportar sin usar el mapa
-    </button>
+      <div class="mg-resumen">
+        <div id="resumen-afectacion" class="resumen-afectacion" hidden></div>
+      </div>
 
-    <div id="resumen-afectacion" class="resumen-afectacion" hidden></div>
+      <div class="mg-lista">
+        <div class="lista-cabecera">
+          <h3>Reportes recientes</h3>
+        </div>
 
-    <div class="lista-cabecera">
-      <h3>Reportes recientes</h3>
+        <button type="button" class="btn-filtros" id="btn-filtros-reportes" aria-expanded="false">🔍 Filtros <span class="btn-filtros-flecha">▾</span></button>
+        <div class="filtros-colapsables" id="filtros-reportes" hidden>
+          <div class="filtro-inline" id="filtro-tipo-reportes"></div>
+          <div class="filtro-localidad">
+            <span class="icono">🏘️</span>
+            <input type="text" id="filtro-localidad-reportes" placeholder="Filtrar por localidad o barrio…" aria-label="Filtrar reportes por localidad">
+            <button type="button" class="limpiar" id="limpiar-filtro-reportes" hidden aria-label="Quitar filtro">✕</button>
+            <button type="button" class="btn-gps" id="gps-filtro-reportes" title="Usar mi ubicación">📡</button>
+          </div>
+          <!-- <label class="toggle-mostrar-todo toggle-verificados">
+            <input type="checkbox" id="toggle-solo-verificados-reportes">
+            ✅ Mostrar solo información verificada
+          </label> -->
+          <label class="toggle-mostrar-todo">
+            <input type="checkbox" id="toggle-atendidos-reportes">
+            Mostrar también los ya atendidos o marcados como desactualizados
+          </label>
+          <!-- <label class="toggle-mostrar-todo" id="fila-mis-reportes" hidden>
+            <input type="checkbox" id="toggle-mis-reportes">
+            Ver solo mis publicaciones
+          </label> -->
+        </div>
+
+        <div id="aviso-cache-reportes" class="aviso-cache" hidden>Mostrando la última copia guardada en este dispositivo. Actualizando…</div>
+        <div id="lista-reportes"></div>
+        <p id="vacio-reportes" class="vacio" hidden>Todavía no hay reportes. Sé la primera persona en marcar dónde se necesita ayuda.</p>
+        <button type="button" class="btn btn-secundario" id="btn-cargar-mas-reportes">Cargar más</button>
+      </div>
     </div>
-    <div class="filtro-inline" id="filtro-tipo-reportes"></div>
-    <div class="filtro-localidad">
-      <span class="icono">🏘️</span>
-      <input type="text" id="filtro-localidad-reportes" placeholder="Filtrar por localidad o barrio…" aria-label="Filtrar reportes por localidad">
-      <button type="button" class="limpiar" id="limpiar-filtro-reportes" hidden aria-label="Quitar filtro">✕</button>
-      <button type="button" class="btn-gps" id="gps-filtro-reportes" title="Usar mi ubicación">📡</button>
-    </div>
-    <!-- <label class="toggle-mostrar-todo toggle-verificados">
-      <input type="checkbox" id="toggle-solo-verificados-reportes">
-      ✅ Mostrar solo información verificada
-    </label> -->
-    <label class="toggle-mostrar-todo">
-      <input type="checkbox" id="toggle-atendidos-reportes">
-      Mostrar también los ya atendidos o marcados como desactualizados
-    </label>
-    <!-- <label class="toggle-mostrar-todo" id="fila-mis-reportes" hidden>
-      <input type="checkbox" id="toggle-mis-reportes">
-      Ver solo mis publicaciones
-    </label> -->
-    <div id="aviso-cache-reportes" class="aviso-cache" hidden>Mostrando la última copia guardada en este dispositivo. Actualizando…</div>
-    <div id="lista-reportes"></div>
-    <p id="vacio-reportes" class="vacio" hidden>Todavía no hay reportes. Sé la primera persona en marcar dónde se necesita ayuda.</p>
-    <button type="button" class="btn btn-secundario" id="btn-cargar-mas-reportes">Cargar más</button>
   </section>
 
   <!-- ===================== DESAPARECIDOS ===================== -->
@@ -103,161 +135,207 @@
     <h2 class="titulo-vista">Personas y mascotas</h2>
     <p class="subtitulo-vista">Publica una ficha para que la comunidad ayude a buscar, o avisa si encontraste a alguien. Deja siempre un contacto.</p>
 
-    <div class="tabs-modo" id="tabs-modo-desaparecidos">
-      <button class="active" data-modo="busco">🔎 Buscando</button>
-      <button data-modo="encontre">✅ Encontrados</button>
-    </div>
-
-    <form id="form-desaparecidos" class="form-card">
-      <div class="fila">
-        <label>¿De quién se trata?</label>
-        <div class="chips" id="chips-tipo-sujeto">
-          <button type="button" class="chip" data-tipo-sujeto="persona" aria-pressed="true">🧍 Persona</button>
-          <button type="button" class="chip" data-tipo-sujeto="mascota" aria-pressed="false">🐾 Mascota</button>
-        </div>
-      </div>
-      <div class="fila">
-        <label for="nombre-desaparecido" id="label-nombre-desaparecido">Nombre (obligatorio)</label>
-        <input type="text" id="nombre-desaparecido" maxlength="100" required placeholder="Nombre de la persona o mascota">
-      </div>
-      <div class="fila">
-        <label for="descripcion-desaparecido">Descripción (obligatorio)</label>
-        <textarea id="descripcion-desaparecido" maxlength="400" required
-          placeholder="Edad aproximada, ropa, señas particulares, raza y color si es mascota, etc."></textarea>
-      </div>
-      <div class="fila">
-        <label for="foto-desaparecido">Fotos (opcional, hasta 3, máx. 5MB cada una)</label>
-        <input type="file" id="foto-desaparecido" accept="image/*" multiple>
-        <p class="ayuda-campo" id="msg-foto-desaparecido"></p>
-      </div>
-      <div class="fila">
-        <label for="localidad-desaparecido">Localidad / barrio</label>
-        <input type="text" id="localidad-desaparecido" maxlength="100" placeholder="Ej: San Fernando, Comuna 17…">
-      </div>
-      <div class="fila">
-        <label for="ubicacion-desaparecido">Última ubicación conocida (detalle)</label>
-        <input type="text" id="ubicacion-desaparecido" maxlength="150" placeholder="Calle, punto de referencia, dirección aproximada">
-      </div>
-      <div class="fila">
-        <label for="contacto-desaparecido">Tu contacto (obligatorio)</label>
-        <input type="tel" id="contacto-desaparecido" maxlength="120" required placeholder="WhatsApp o teléfono">
-        <p class="ayuda-campo">Solo se muestra este número, nunca datos privados adicionales.</p>
-      </div>
-      <button type="submit" class="btn btn-primario" id="btn-publicar-desaparecidos">Publicar búsqueda</button>
-      <p class="msg-form" id="msg-form-desaparecidos"></p>
-    </form>
+    <button type="button" class="btn btn-primario btn-grande" id="btn-abrir-form-desaparecidos">➕ Publicar</button>
 
     <div class="lista-cabecera">
-      <h3 id="titulo-lista-desaparecidos">Publicados recientemente</h3>
+      <h3>Publicados recientemente</h3>
     </div>
-    <div class="filtro-inline" id="filtro-desaparecidos">
-      <button class="active" data-filtro="todos">Todos</button>
-      <button data-filtro="persona">🧍 Personas</button>
-      <button data-filtro="mascota">🐾 Mascotas</button>
+
+    <button type="button" class="btn-filtros" id="btn-filtros-desaparecidos" aria-expanded="false">🔍 Filtros <span class="btn-filtros-flecha">▾</span></button>
+    <div class="filtros-colapsables" id="filtros-desaparecidos" hidden>
+      <div class="filtro-inline" id="filtro-modo-desaparecidos">
+        <button class="active" data-filtro="todos">Todos</button>
+        <button data-filtro="busco">🔎 Buscando</button>
+        <button data-filtro="encontre">✅ Encontrados</button>
+      </div>
+      <div class="filtro-inline" id="filtro-desaparecidos">
+        <button class="active" data-filtro="todos">Todos</button>
+        <button data-filtro="persona">🧍 Personas</button>
+        <button data-filtro="mascota">🐾 Mascotas</button>
+      </div>
+      <div class="filtro-localidad">
+        <span class="icono">🏘️</span>
+        <input type="text" id="filtro-localidad-desaparecidos" placeholder="Filtrar por localidad o barrio…" aria-label="Filtrar por localidad">
+        <button type="button" class="limpiar" id="limpiar-filtro-desaparecidos" hidden aria-label="Quitar filtro">✕</button>
+        <button type="button" class="btn-gps" id="gps-filtro-desaparecidos" title="Usar mi ubicación">📡</button>
+      </div>
+      <!-- <label class="toggle-mostrar-todo toggle-verificados">
+        <input type="checkbox" id="toggle-solo-verificados-desaparecidos">
+        ✅ Mostrar solo información verificada
+      </label> -->
+      <label class="toggle-mostrar-todo">
+        <input type="checkbox" id="toggle-encontrados-desaparecidos">
+        Mostrar también los ya resueltos o marcados como desactualizados
+      </label>
+      <!-- <label class="toggle-mostrar-todo" id="fila-mis-desaparecidos" hidden>
+        <input type="checkbox" id="toggle-mis-desaparecidos">
+        Ver solo mis publicaciones
+      </label> -->
     </div>
-    <div class="filtro-localidad">
-      <span class="icono">🏘️</span>
-      <input type="text" id="filtro-localidad-desaparecidos" placeholder="Filtrar por localidad o barrio…" aria-label="Filtrar por localidad">
-      <button type="button" class="limpiar" id="limpiar-filtro-desaparecidos" hidden aria-label="Quitar filtro">✕</button>
-      <button type="button" class="btn-gps" id="gps-filtro-desaparecidos" title="Usar mi ubicación">📡</button>
-    </div>
-    <!-- <label class="toggle-mostrar-todo toggle-verificados">
-      <input type="checkbox" id="toggle-solo-verificados-desaparecidos">
-      ✅ Mostrar solo información verificada
-    </label> -->
-    <label class="toggle-mostrar-todo">
-      <input type="checkbox" id="toggle-encontrados-desaparecidos">
-      <span id="toggle-encontrados-desaparecidos-texto">Mostrar también los ya encontrados o marcados como desactualizados</span>
-    </label>
-    <!-- <label class="toggle-mostrar-todo" id="fila-mis-desaparecidos" hidden>
-      <input type="checkbox" id="toggle-mis-desaparecidos">
-      Ver solo mis publicaciones
-    </label> -->
+
     <div id="aviso-cache-desaparecidos" class="aviso-cache" hidden>Mostrando la última copia guardada en este dispositivo. Actualizando…</div>
     <div id="lista-desaparecidos"></div>
     <p id="vacio-desaparecidos" class="vacio" hidden>Aún no hay publicaciones en esta categoría.</p>
     <button type="button" class="btn btn-secundario" id="btn-cargar-mas-desaparecidos">Cargar más</button>
   </section>
 
+  <!-- ===================== Modal: nueva publicación de Desaparecidos ===================== -->
+  <div class="modal-fondo" id="modal-desaparecidos" hidden>
+    <div class="modal-caja">
+      <div class="lista-cabecera" style="margin-top:0">
+        <h3 style="text-transform:none; font-size:16px; color:var(--text)">Nueva publicación</h3>
+        <button type="button" class="btn btn-secundario" id="btn-cerrar-modal-desaparecidos" style="padding:6px 12px">✕</button>
+      </div>
+
+      <form id="form-desaparecidos" class="form-card" style="margin-bottom:0; border:none; padding:0">
+        <div class="fila">
+          <label>¿Qué quieres reportar?</label>
+          <div class="chips" id="chips-modo-desaparecido">
+            <button type="button" class="chip" data-modo="busco" aria-pressed="true">🔎 Busco a alguien</button>
+            <button type="button" class="chip" data-modo="encontre" aria-pressed="false">✅ Encontré a alguien</button>
+          </div>
+        </div>
+        <div class="fila">
+          <label>¿De quién se trata?</label>
+          <div class="chips" id="chips-tipo-sujeto">
+            <button type="button" class="chip" data-tipo-sujeto="persona" aria-pressed="true">🧍 Persona</button>
+            <button type="button" class="chip" data-tipo-sujeto="mascota" aria-pressed="false">🐾 Mascota</button>
+          </div>
+        </div>
+        <div class="fila">
+          <label for="nombre-desaparecido" id="label-nombre-desaparecido">Nombre (obligatorio)</label>
+          <input type="text" id="nombre-desaparecido" maxlength="100" required placeholder="Nombre de la persona o mascota">
+        </div>
+        <div class="fila">
+          <label for="descripcion-desaparecido">Descripción (obligatorio)</label>
+          <textarea id="descripcion-desaparecido" maxlength="400" required
+            placeholder="Edad aproximada, ropa, señas particulares, raza y color si es mascota, etc."></textarea>
+        </div>
+        <div class="fila">
+          <label for="foto-desaparecido">Fotos (opcional, hasta 3, máx. 5MB cada una)</label>
+          <input type="file" id="foto-desaparecido" accept="image/*" multiple>
+          <p class="ayuda-campo" id="msg-foto-desaparecido"></p>
+        </div>
+        <div class="fila">
+          <label for="localidad-desaparecido">Localidad / barrio</label>
+          <input type="text" id="localidad-desaparecido" maxlength="100" placeholder="Ej: San Fernando, Comuna 17…">
+        </div>
+        <div class="fila">
+          <label for="ubicacion-desaparecido">Última ubicación conocida (detalle)</label>
+          <input type="text" id="ubicacion-desaparecido" maxlength="150" placeholder="Calle, punto de referencia, dirección aproximada">
+        </div>
+        <div class="fila">
+          <label for="contacto-desaparecido">Tu contacto (obligatorio)</label>
+          <input type="tel" id="contacto-desaparecido" maxlength="120" required placeholder="WhatsApp o teléfono">
+          <p class="ayuda-campo">Solo se muestra este número, nunca datos privados adicionales.</p>
+        </div>
+        <button type="submit" class="btn btn-primario" id="btn-publicar-desaparecidos">Publicar búsqueda</button>
+        <p class="msg-form" id="msg-form-desaparecidos"></p>
+      </form>
+    </div>
+  </div>
+
   <!-- ===================== COMUNIDAD ===================== -->
-  <section id="vista-comunidad" class="vista">
-    <h2 class="titulo-vista">Comunidad</h2>
+  <section id="vista-comunidad" class="vista active">
+    <h2 class="titulo-vista">Necesito / Ofrezco ayuda</h2>
     <p class="subtitulo-vista">Pide algo que necesites o publica algo que puedas ofrecer: agua, transporte, alojamiento, atención médica, herramientas, comida...</p>
 
-    <form id="form-comunidad" class="form-card">
-      <div class="fila">
-        <label>¿Qué es esta publicación?</label>
-        <div class="chips" id="chips-tipo-publicacion">
-          <button type="button" class="chip" data-tipo-publicacion="peticion" aria-pressed="true">🙋 Necesito</button>
-          <button type="button" class="chip" data-tipo-publicacion="oferta" aria-pressed="false">🤝 Puedo ofrecer</button>
-        </div>
-      </div>
-      <div class="fila">
-        <label for="servicio-comunidad">¿Qué necesitas u ofreces? (obligatorio)</label>
-        <input type="text" id="servicio-comunidad" maxlength="100" required placeholder="Ej: Transporte, agua potable, alojamiento temporal…">
-      </div>
-      <div class="fila">
-        <label>Categoría</label>
-        <div class="chips" id="chips-categoria-comunidad"></div>
-      </div>
-      <div class="fila">
-        <label for="descripcion-comunidad">Detalles</label>
-        <textarea id="descripcion-comunidad" maxlength="300" placeholder="Horarios, condiciones, cuántas personas necesitan esto, etc."></textarea>
-      </div>
-      <div class="fila">
-        <label>Detalle por ítem (opcional)</label>
-        <p class="ayuda-campo">Ej: Agua embotellada — 20, Mantas — 5. Deja la cantidad vacía si no la sabes.</p>
-        <div id="items-comunidad" class="items-comunidad"></div>
-        <button type="button" id="btn-agregar-item-comunidad" class="btn-agregar-item">+ Agregar otro</button>
-      </div>
-      <div class="fila">
-        <label for="zona-comunidad">Zona / barrio</label>
-        <input type="text" id="zona-comunidad" maxlength="120" placeholder="Ej: San Fernando, Comuna 17…">
-      </div>
-      <div class="fila">
-        <label for="contacto-comunidad">Tu contacto (obligatorio)</label>
-        <input type="tel" id="contacto-comunidad" maxlength="120" required placeholder="WhatsApp o teléfono">
-      </div>
-      <button type="submit" class="btn btn-primario">Publicar</button>
-      <p class="msg-form" id="msg-form-comunidad"></p>
-    </form>
+    <button type="button" class="btn btn-primario btn-grande" id="btn-abrir-form-comunidad">➕ Agregar ayuda</button>
 
     <div class="lista-cabecera">
       <h3>Publicaciones recientes</h3>
     </div>
-    <div class="filtro-inline" id="filtro-tipo-comunidad">
-      <button class="active" data-filtro="todos">Todas</button>
-      <button data-filtro="peticion">🙋 Necesitan</button>
-      <button data-filtro="oferta">🤝 Ofrecen</button>
+
+    <button type="button" class="btn-filtros" id="btn-filtros-comunidad" aria-expanded="false">🔍 Filtros <span class="btn-filtros-flecha">▾</span></button>
+    <div class="filtros-colapsables" id="filtros-comunidad" hidden>
+      <div class="filtro-inline" id="filtro-tipo-comunidad">
+        <button class="active" data-filtro="todos">Todas</button>
+        <button data-filtro="peticion">🙋 Necesitan</button>
+        <button data-filtro="oferta">🤝 Ofrecen</button>
+      </div>
+      <div class="fila" style="margin-bottom:10px">
+        <select id="filtro-categoria-comunidad" class="select-oscuro" aria-label="Filtrar por categoría">
+          <option value="todas">Todas las categorías</option>
+        </select>
+      </div>
+      <div class="filtro-localidad">
+        <span class="icono">🏘️</span>
+        <input type="text" id="filtro-zona-comunidad" placeholder="Filtrar por zona o barrio…" aria-label="Filtrar por zona">
+        <button type="button" class="limpiar" id="limpiar-filtro-zona-comunidad" hidden aria-label="Quitar filtro">✕</button>
+        <button type="button" class="btn-gps" id="gps-filtro-comunidad" title="Usar mi ubicación">📡</button>
+      </div>
+      <!-- <label class="toggle-mostrar-todo toggle-verificados">
+        <input type="checkbox" id="toggle-solo-verificados-comunidad">
+        ✅ Mostrar solo información verificada
+      </label> -->
+      <label class="toggle-mostrar-todo">
+        <input type="checkbox" id="toggle-cubiertos-comunidad">
+        Mostrar también las atendidas, canceladas o marcadas como desactualizadas
+      </label>
+      <!-- <label class="toggle-mostrar-todo" id="fila-mis-comunidad" hidden>
+        <input type="checkbox" id="toggle-mis-comunidad">
+        Ver solo mis publicaciones
+      </label> -->
     </div>
-    <div class="fila" style="margin-bottom:10px">
-      <select id="filtro-categoria-comunidad" class="select-oscuro" aria-label="Filtrar por categoría">
-        <option value="todas">Todas las categorías</option>
-      </select>
-    </div>
-    <div class="filtro-localidad">
-      <span class="icono">🏘️</span>
-      <input type="text" id="filtro-zona-comunidad" placeholder="Filtrar por zona o barrio…" aria-label="Filtrar por zona">
-      <button type="button" class="limpiar" id="limpiar-filtro-zona-comunidad" hidden aria-label="Quitar filtro">✕</button>
-      <button type="button" class="btn-gps" id="gps-filtro-comunidad" title="Usar mi ubicación">📡</button>
-    </div>
-    <!-- <label class="toggle-mostrar-todo toggle-verificados">
-      <input type="checkbox" id="toggle-solo-verificados-comunidad">
-      ✅ Mostrar solo información verificada
-    </label> -->
-    <label class="toggle-mostrar-todo">
-      <input type="checkbox" id="toggle-cubiertos-comunidad">
-      Mostrar también las atendidas, canceladas o marcadas como desactualizadas
-    </label>
-    <!-- <label class="toggle-mostrar-todo" id="fila-mis-comunidad" hidden>
-      <input type="checkbox" id="toggle-mis-comunidad">
-      Ver solo mis publicaciones
-    </label> -->
+
     <div id="aviso-cache-comunidad" class="aviso-cache" hidden>Mostrando la última copia guardada en este dispositivo. Actualizando…</div>
     <div id="lista-comunidad"></div>
     <p id="vacio-comunidad" class="vacio" hidden>Todavía no hay publicaciones. ¡Sé la primera persona en pedir u ofrecer ayuda!</p>
     <button type="button" class="btn btn-secundario" id="btn-cargar-mas-comunidad">Cargar más</button>
   </section>
+
+  <!-- ===================== Modal: nueva publicación de Comunidad ===================== -->
+  <div class="modal-fondo" id="modal-comunidad" hidden>
+    <div class="modal-caja">
+      <div class="lista-cabecera" style="margin-top:0">
+        <h3 style="text-transform:none; font-size:16px; color:var(--text)">Nueva publicación</h3>
+        <button type="button" class="btn btn-secundario" id="btn-cerrar-modal-comunidad" style="padding:6px 12px">✕</button>
+      </div>
+
+      <form id="form-comunidad" class="form-card" style="margin-bottom:0; border:none; padding:0">
+        <div class="fila">
+          <label>¿Qué es esta publicación?</label>
+          <div class="chips" id="chips-tipo-publicacion">
+            <button type="button" class="chip" data-tipo-publicacion="peticion" aria-pressed="true">🙋 Necesito</button>
+            <button type="button" class="chip" data-tipo-publicacion="oferta" aria-pressed="false">🤝 Puedo ofrecer</button>
+          </div>
+        </div>
+        <div class="fila">
+          <label for="servicio-comunidad">¿Qué necesitas u ofreces? (obligatorio)</label>
+          <input type="text" id="servicio-comunidad" maxlength="100" required placeholder="Ej: Transporte, agua potable, alojamiento temporal…">
+        </div>
+        <div class="fila">
+          <label>Categoría</label>
+          <div class="chips" id="chips-categoria-comunidad"></div>
+        </div>
+        <div class="fila">
+          <label for="descripcion-comunidad">Detalles</label>
+          <textarea id="descripcion-comunidad" maxlength="300" placeholder="Horarios, condiciones, cuántas personas necesitan esto, etc."></textarea>
+        </div>
+        <div class="fila">
+          <label>Detalle por ítem (opcional)</label>
+          <p class="ayuda-campo">Ej: Agua embotellada — 20, Mantas — 5. Deja la cantidad vacía si no la sabes.</p>
+          <div id="items-comunidad" class="items-comunidad"></div>
+          <button type="button" id="btn-agregar-item-comunidad" class="btn-agregar-item">+ Agregar otro</button>
+        </div>
+        <div class="fila">
+          <label for="foto-comunidad">Fotos (opcional, hasta 3, máx. 5MB cada una)</label>
+          <input type="file" id="foto-comunidad" accept="image/*" multiple>
+          <p class="ayuda-campo" id="msg-foto-comunidad"></p>
+        </div>
+        <div class="fila">
+          <label for="zona-comunidad">Zona / barrio</label>
+          <input type="text" id="zona-comunidad" maxlength="120" placeholder="Ej: San Fernando, Comuna 17…">
+        </div>
+        <div class="fila">
+          <label for="contacto-comunidad">Tu contacto (obligatorio)</label>
+          <input type="tel" id="contacto-comunidad" maxlength="120" required placeholder="WhatsApp o teléfono">
+        </div>
+        <button type="submit" class="btn btn-primario">Publicar</button>
+        <p class="msg-form" id="msg-form-comunidad"></p>
+      </form>
+    </div>
+  </div>
 
 </main>
 
@@ -327,6 +405,23 @@
       <button type="submit" class="btn btn-primario">Enviar reporte</button>
       <p class="msg-form" id="msg-form-reporte"></p>
     </form>
+  </div>
+</div>
+
+<!-- ===================== Modal: tutorial de bienvenida (solo la primera vez) ===================== -->
+<div class="modal-fondo" id="modal-tutorial" hidden>
+  <div class="modal-caja tutorial-caja">
+    <div class="tutorial-icono">👋</div>
+    <h3 class="tutorial-titulo">Bienvenido</h3>
+    <p class="tutorial-texto">…</p>
+    <div class="tutorial-puntos"></div>
+    <div class="tutorial-botones">
+      <button type="button" id="btn-tutorial-saltar" class="btn-saltar-tutorial">Saltar</button>
+      <div class="tutorial-botones-nav">
+        <button type="button" id="btn-tutorial-anterior" class="btn btn-secundario">Anterior</button>
+        <button type="button" id="btn-tutorial-siguiente" class="btn btn-primario">Siguiente</button>
+      </div>
+    </div>
   </div>
 </div>
 

@@ -1,4 +1,10 @@
 // js/desaparecidos.js
+//
+// La lista muestra TODO junto (buscando y encontrados, personas y
+// mascotas) por defecto — "modo" y "tipo de sujeto" son filtros, no
+// pestañas separadas. Publicar una ficha nueva se hace desde un modal;
+// adentro del modal sí hay que elegir el modo (Busco / Encontré), porque
+// cambia qué campos son obligatorios.
 import { crearControladorDatos } from './datos.js';
 import { COLECCIONES, UMBRAL_DESACTUALIZADO } from './config.js';
 import {
@@ -12,7 +18,7 @@ import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
 const controlador = crearControladorDatos(COLECCIONES.desaparecidos);
 const COLECCION_ID = COLECCIONES.desaparecidos;
 
-let modoActivo = 'busco'; // busco | encontre
+let filtroModo = 'todos'; // todos | busco | encontre
 let filtroTipoSujeto = 'todos'; // todos | persona | mascota
 let filtroLocalidad = '';
 let mostrarResueltos = false;
@@ -23,20 +29,16 @@ let itemsActuales = [];
 const TEXTOS_MODO = {
   busco: {
     tituloForm: 'Publicar búsqueda',
-    tituloLista: 'Publicados recientemente',
-    vacio: 'Aún no hay publicaciones en esta categoría.',
     botonResolver: '✅ Marcar como encontrado',
+    etiquetaBadge: '🔎 Buscando',
     etiquetaResuelto: '✅ Ya se encontró',
-    toggleMostrar: 'Mostrar también los ya encontrados o marcados como desactualizados',
     nombreObligatorio: true
   },
   encontre: {
     tituloForm: 'Publicar hallazgo',
-    tituloLista: 'Encontrados recientemente',
-    vacio: 'Todavía no hay publicaciones de personas o mascotas encontradas.',
     botonResolver: '✅ Marcar como reclamado',
+    etiquetaBadge: '✅ Encontrado',
     etiquetaResuelto: '✅ Ya fue reclamado',
-    toggleMostrar: 'Mostrar también los ya reclamados o marcados como desactualizados',
     nombreObligatorio: false
   }
 };
@@ -80,6 +82,7 @@ function tarjetaHTML(item) {
         <span class="etiqueta ${esPersona ? 'urgente' : 'info'}">${esPersona ? '🧍 Persona' : '🐾 Mascota'}</span>
         <span class="meta">${tiempoRelativo(item._fecha)}</span>
       </div>
+      <span class="etiqueta ${item.modo === 'encontre' ? 'disponible' : 'en-atencion'}">${textos.etiquetaBadge}</span>
       ${item.verificado ? '<span class="etiqueta verificado">✅ Fuente verificada</span>' : ''}
       ${resuelto ? `<span class="etiqueta resuelto">${textos.etiquetaResuelto}</span>` : ''}
       ${desactualizada ? '<span class="etiqueta alerta">⚠️ Varias personas dicen que esto podría estar desactualizado</span>' : ''}
@@ -100,7 +103,7 @@ function tarjetaHTML(item) {
 
 function itemsFiltrados(items) {
   return items.filter((it) => {
-    const pasaModo = (it.modo || 'busco') === modoActivo;
+    const pasaModo = filtroModo === 'todos' || (it.modo || 'busco') === filtroModo;
     const pasaTipo = filtroTipoSujeto === 'todos' || it.tipoSujeto === filtroTipoSujeto;
     const pasaLocalidad = !filtroLocalidad || String(it.localidad || '').toLowerCase().includes(filtroLocalidad);
     const desactualizada = (it.marcasDesactualizado || 0) >= UMBRAL_DESACTUALIZADO;
@@ -119,21 +122,11 @@ function renderLista(items, { agregar = false } = {}) {
   if (!agregar) cont.innerHTML = '';
   if (visibles.length === 0 && !agregar) {
     vacio.hidden = false;
-    vacio.textContent = TEXTOS_MODO[modoActivo].vacio;
+    vacio.textContent = 'No hay publicaciones que coincidan con este filtro todavía.';
   } else {
     vacio.hidden = true;
     cont.insertAdjacentHTML('beforeend', visibles.map(tarjetaHTML).join(''));
   }
-}
-
-function actualizarTextosPorModo() {
-  const textos = TEXTOS_MODO[modoActivo];
-  document.getElementById('titulo-lista-desaparecidos').textContent = textos.tituloLista;
-  document.getElementById('toggle-encontrados-desaparecidos-texto').textContent = textos.toggleMostrar;
-  document.getElementById('btn-publicar-desaparecidos').textContent = textos.tituloForm;
-  const labelNombre = document.getElementById('label-nombre-desaparecido');
-  labelNombre.textContent = textos.nombreObligatorio ? 'Nombre (obligatorio)' : 'Nombre (si lo sabes)';
-  document.getElementById('nombre-desaparecido').required = textos.nombreObligatorio;
 }
 
 function reemplazarTarjetaEnDOM(id) {
@@ -191,18 +184,17 @@ export function iniciarListaYRealtimeDesaparecidos() {
     }
   });
 
-  // --- Pestañas internas Buscando / Encontrados ---
-  document.querySelectorAll('#tabs-modo-desaparecidos button').forEach((btn) => {
+  // --- Filtro por modo: Todos / Buscando / Encontrados ---
+  document.querySelectorAll('#filtro-modo-desaparecidos button').forEach((btn) => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('#tabs-modo-desaparecidos button').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('#filtro-modo-desaparecidos button').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      modoActivo = btn.dataset.modo;
-      actualizarTextosPorModo();
+      filtroModo = btn.dataset.filtro;
       renderLista(itemsActuales);
     });
   });
-  actualizarTextosPorModo();
 
+  // --- Filtro por tipo de sujeto: Todos / Personas / Mascotas ---
   document.querySelectorAll('#filtro-desaparecidos button').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#filtro-desaparecidos button').forEach((b) => b.classList.remove('active'));
@@ -247,10 +239,13 @@ export function iniciarListaYRealtimeDesaparecidos() {
     }
   });
 
-  // document.getElementById('toggle-solo-verificados-desaparecidos').addEventListener('change', (e) => {
-  //   soloVerificados = e.target.checked;
-  //   renderLista(itemsActuales);
-  // });
+  // const toggleVerificados = document.getElementById('toggle-solo-verificados-desaparecidos');
+  // if (toggleVerificados) {
+  //   toggleVerificados.addEventListener('change', (e) => {
+  //     soloVerificados = e.target.checked;
+  //     renderLista(itemsActuales);
+  //   });
+  // }
 
   document.getElementById('toggle-encontrados-desaparecidos').addEventListener('change', (e) => {
     mostrarResueltos = e.target.checked;
@@ -259,15 +254,16 @@ export function iniciarListaYRealtimeDesaparecidos() {
 
   const filaMisPublicaciones = document.getElementById('fila-mis-desaparecidos');
   // const toggleMisPublicaciones = document.getElementById('toggle-mis-desaparecidos');
-  // toggleMisPublicaciones.addEventListener('change', (e) => {
-  //   soloMisPublicaciones = e.target.checked;
-  //   renderLista(itemsActuales);
-  // });
+  // if (toggleMisPublicaciones) {
+  //   toggleMisPublicaciones.addEventListener('change', (e) => {
+  //     soloMisPublicaciones = e.target.checked;
+  //     renderLista(itemsActuales);
+  //   });
+  // }
   document.addEventListener('auth-cambio', (e) => {
-    filaMisPublicaciones.hidden = !e.detail.usuario;
+    if (filaMisPublicaciones) filaMisPublicaciones.hidden = !e.detail.usuario;
     if (!e.detail.usuario) {
       soloMisPublicaciones = false;
-      // toggleMisPublicaciones.checked = false;
       renderLista(itemsActuales);
     }
   });
@@ -282,10 +278,40 @@ export function iniciarListaYRealtimeDesaparecidos() {
     e.target.textContent = 'Cargar más';
     e.target.hidden = !hayMas;
   });
+
+  // --- Botón chico "➕ Publicar" que abre el modal ---
+  const modal = document.getElementById('modal-desaparecidos');
+  document.getElementById('btn-abrir-form-desaparecidos').addEventListener('click', () => {
+    modal.hidden = false;
+  });
+  document.getElementById('btn-cerrar-modal-desaparecidos').addEventListener('click', () => {
+    modal.hidden = true;
+  });
 }
 
 export function iniciarFormularioDesaparecidos() {
+  let modoModal = 'busco'; // qué se está publicando AHORA MISMO en el modal
   let tipoSujeto = 'persona';
+
+  function aplicarTextosModoModal() {
+    const textos = TEXTOS_MODO[modoModal];
+    document.getElementById('btn-publicar-desaparecidos').textContent = textos.tituloForm;
+    const labelNombre = document.getElementById('label-nombre-desaparecido');
+    labelNombre.textContent = textos.nombreObligatorio ? 'Nombre (obligatorio)' : 'Nombre (si lo sabes)';
+    document.getElementById('nombre-desaparecido').required = textos.nombreObligatorio;
+  }
+
+  const chipsModo = document.querySelectorAll('#chips-modo-desaparecido .chip');
+  chipsModo.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      chipsModo.forEach((c) => c.setAttribute('aria-pressed', 'false'));
+      chip.setAttribute('aria-pressed', 'true');
+      modoModal = chip.dataset.modo;
+      aplicarTextosModoModal();
+    });
+  });
+  aplicarTextosModoModal();
+
   const chips = document.querySelectorAll('#chips-tipo-sujeto .chip');
   chips.forEach((chip) => {
     chip.addEventListener('click', () => {
@@ -327,7 +353,7 @@ export function iniciarFormularioDesaparecidos() {
     const contacto = limpiarTexto(document.getElementById('contacto-desaparecido').value, 120);
     const archivos = inputFoto.files;
 
-    const textos = TEXTOS_MODO[modoActivo];
+    const textos = TEXTOS_MODO[modoModal];
     if (textos.nombreObligatorio && !nombre) {
       msg.textContent = 'El nombre es obligatorio.';
       msg.classList.add('error');
@@ -365,11 +391,11 @@ export function iniciarFormularioDesaparecidos() {
         fotos = await subirFotos(archivos, 'desaparecidos');
       }
       btn.textContent = 'Publicando…';
-      const estadoInicial = modoActivo === 'busco' ? 'buscando' : 'disponible';
+      const estadoInicial = modoModal === 'busco' ? 'buscando' : 'disponible';
       const usuario = obtenerUsuarioActual();
       const ref = await controlador.crearConAutoria(
         {
-          modo: modoActivo,
+          modo: modoModal,
           tipoSujeto,
           nombre,
           descripcion,
@@ -393,13 +419,16 @@ export function iniciarFormularioDesaparecidos() {
       chips.forEach((c) => c.setAttribute('aria-pressed', 'false'));
       document.querySelector('#chips-tipo-sujeto .chip[data-tipo-sujeto="persona"]').setAttribute('aria-pressed', 'true');
       tipoSujeto = 'persona';
+      setTimeout(() => {
+        document.getElementById('modal-desaparecidos').hidden = true;
+      }, 1200);
     } catch (err) {
       console.error(err);
       msg.textContent = 'No se pudo publicar. Revisa tu conexión e intenta de nuevo.';
       msg.classList.add('error');
     } finally {
       btn.disabled = false;
-      btn.textContent = TEXTOS_MODO[modoActivo].tituloForm;
+      btn.textContent = TEXTOS_MODO[modoModal].tituloForm;
     }
   });
 }

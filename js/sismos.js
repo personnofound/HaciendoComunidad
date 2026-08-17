@@ -2,6 +2,7 @@
 
 import { obtenerNombreLugar, tiempoRelativo, escaparHTML } from './utils.js';
 import { marcarSismoEnMapa, irAVistaMapa } from './mapa.js';
+import { publicarNotificacion, retirarNotificacion, registrarAccionNotificacion } from './notificaciones.js';
 
 const MAGNITUD_MINIMA = 4.0;
 const REVISAR_CADA_MS = 5 * 60 * 1000;
@@ -71,28 +72,21 @@ function construirPopupHTML(sismo, nombreLugar) {
   `;
 }
 
-function renderBanner(sismo, nombreLugar) {
-  const cont = document.getElementById('contenedor-sismo');
-  if (!cont) return;
-
+function publicarSismoEnCampana(sismo, nombreLugar) {
+  const notifId = `sismo-${sismo.id}`;
   const esFuerte = sismo.mag >= 5.0;
 
-  cont.innerHTML = `
-    <div class="franja-sismo ${esFuerte ? 'sismo-fuerte' : 'sismo-moderado'}">
-      <span class="franja-sismo-icono" aria-hidden="true">🌐</span>
-      <div class="franja-sismo-texto">
-        <strong>Sismo Mag.${sismo.mag.toFixed(1)} · ${escaparHTML(nombreLugar)}</strong>
-        <p>
-          Profundidad ${sismo.depth} km · ${formatearFechaSismo(sismo.fecha)} ·
-          Fuente: <a class="franja-aviso-link" href="https://sgc.gov.co/sismos" target="_blank" rel="noopener noreferrer">${escaparHTML(sismo.agencia)}</a>
-        </p>
-        <button type="button" class="franja-sismo-btn-mapa" id="btn-ver-sismo-mapa">📍 Ver en el mapa</button>
-      </div>
-      <button type="button" class="btn-cerrar-aviso" id="btn-cerrar-sismo" aria-label="Cerrar aviso de sismo">✕</button>
-    </div>`;
-  cont.hidden = false;
+  publicarNotificacion({
+    id: notifId,
+    icono: '🌐',
+    clase: esFuerte ? 'sismo-fuerte' : 'sismo-moderado',
+    titulo: `Sismo Mag.${sismo.mag.toFixed(1)} · ${escaparHTML(nombreLugar)}`,
+    mensaje: `Profundidad ${sismo.depth} km · ${formatearFechaSismo(sismo.fecha)} · Fuente: ${escaparHTML(sismo.agencia)}`,
+    accionHTML: '<button type="button" class="item-notificacion-btn" data-accion="ver-mapa">📍 Ver en el mapa</button>',
+    onCerrar: () => localStorage.setItem(claveDismiss(sismo.id), '1')
+  });
 
-  document.getElementById('btn-ver-sismo-mapa').addEventListener('click', () => {
+  registrarAccionNotificacion(notifId, 'ver-mapa', () => {
     irAVistaMapa();
     marcarSismoEnMapa({
       lat: sismo.lat,
@@ -101,19 +95,16 @@ function renderBanner(sismo, nombreLugar) {
       zoom: 9
     });
   });
-
-  document.getElementById('btn-cerrar-sismo').addEventListener('click', () => {
-    localStorage.setItem(claveDismiss(sismo.id), '1');
-    cont.hidden = true;
-    cont.innerHTML = '';
-  });
 }
 
 async function revisarSismos() {
   try {
     const sismo = await obtenerUltimoSismoRelevante();
     if (!sismo) return;
-    if (localStorage.getItem(claveDismiss(sismo.id))) return;
+    if (localStorage.getItem(claveDismiss(sismo.id))) {
+      retirarNotificacion(`sismo-${sismo.id}`);
+      return;
+    }
 
     let nombreLugar = sismo.lugarBase;
     try {
@@ -121,7 +112,7 @@ async function revisarSismos() {
     } catch (e) {
     }
 
-    renderBanner(sismo, nombreLugar || 'Colombia');
+    publicarSismoEnCampana(sismo, nombreLugar || 'Colombia');
   } catch (error) {
     console.warn('No se pudo revisar el monitor de sismos:', error);
   }

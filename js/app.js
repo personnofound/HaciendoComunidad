@@ -4,7 +4,43 @@ import { iniciarListaYRealtimeDesaparecidos, iniciarFormularioDesaparecidos } fr
 import { iniciarListaYRealtimeComunidad, iniciarFormularioComunidad } from './comunidad.js';
 import { iniciarAviso } from './aviso.js';
 import { iniciarMonitorSismos } from './sismos.js';
+import { iniciarCampanaNotificaciones, publicarNotificacion, retirarNotificacion, registrarAccionNotificacion } from './notificaciones.js';
 import { iniciarSesionGoogle, cerrarSesion, onCambioAuth, usuarioEsCuentaInstitucional } from './auth.js';
+import { iniciarTutorial } from './tutorial.js';
+import { iniciarTema } from './tema.js';
+
+// ---------- Filtros colapsables (uno por sección) ----------
+// ---------- Cerrar modales de publicar al hacer clic afuera ----------
+function iniciarCierreModalesAlClickAfuera() {
+  ['modal-reporte', 'modal-desaparecidos', 'modal-comunidad'].forEach((id) => {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.addEventListener('click', (e) => {
+      // Solo si el clic fue justo en el fondo oscuro, no en el contenido
+      // del formulario (que también es descendiente de este mismo div).
+      if (e.target === modal) modal.hidden = true;
+    });
+  });
+}
+
+function iniciarFiltrosColapsables() {
+  const pares = [
+    ['btn-filtros-reportes', 'filtros-reportes'],
+    ['btn-filtros-desaparecidos', 'filtros-desaparecidos'],
+    ['btn-filtros-comunidad', 'filtros-comunidad']
+  ];
+  pares.forEach(([idBoton, idPanel]) => {
+    const boton = document.getElementById(idBoton);
+    const panel = document.getElementById(idPanel);
+    if (!boton || !panel) return;
+    boton.addEventListener('click', () => {
+      const abierto = !panel.hidden;
+      panel.hidden = abierto;
+      boton.setAttribute('aria-expanded', String(!abierto));
+      boton.classList.toggle('activo', !abierto);
+    });
+  });
+}
 
 // ---------- Pestañas ----------
 function iniciarTabs() {
@@ -45,46 +81,31 @@ function claveDismissInstalar() {
 }
 
 function iniciarInstalacionPWA() {
-  const cont = document.getElementById('contenedor-instalar');
-  if (!cont) return;
-
+  const NOTIF_ID = 'instalar-app';
   let eventoDiferido = null;
 
   const yaEstaInstalada = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   const yaLoCerroHoy = localStorage.getItem(claveDismissInstalar()) === '1';
   const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
-  function ocultar() {
-    cont.hidden = true;
-    cont.innerHTML = '';
-  }
-
   function mostrar({ mensaje, conBoton }) {
     if (yaEstaInstalada || yaLoCerroHoy) return;
-    cont.innerHTML = `
-      <div class="franja-aviso">
-        <span class="franja-aviso-icono" aria-hidden="true">📲</span>
-        <div class="franja-aviso-texto">
-          <strong>Instala la app</strong>
-          <p>${mensaje}</p>
-          ${conBoton ? '<button type="button" class="franja-sismo-btn-mapa" id="btn-instalar">Instalar ahora</button>' : ''}
-        </div>
-        <button type="button" class="btn-cerrar-aviso" id="btn-cerrar-instalar" aria-label="Cerrar aviso de instalación">✕</button>
-      </div>`;
-    cont.hidden = false;
-
-    document.getElementById('btn-cerrar-instalar').addEventListener('click', () => {
-      localStorage.setItem(claveDismissInstalar(), '1');
-      ocultar();
+    publicarNotificacion({
+      id: NOTIF_ID,
+      icono: '📲',
+      titulo: 'Instala la app',
+      mensaje,
+      accionHTML: conBoton ? '<button type="button" class="item-notificacion-btn" data-accion="instalar">Instalar ahora</button>' : '',
+      onCerrar: () => localStorage.setItem(claveDismissInstalar(), '1')
     });
 
     if (conBoton) {
-      document.getElementById('btn-instalar').addEventListener('click', async () => {
+      registrarAccionNotificacion(NOTIF_ID, 'instalar', async () => {
         if (!eventoDiferido) return;
         eventoDiferido.prompt();
         await eventoDiferido.userChoice;
         eventoDiferido = null;
-        ocultar();
+        retirarNotificacion(NOTIF_ID);
       });
     }
   }
@@ -152,11 +173,16 @@ function iniciarPanelAuth() {
 // ---------- Arranque ----------
 document.addEventListener('DOMContentLoaded', () => {
   iniciarTabs();
+  iniciarFiltrosColapsables();
+  iniciarCierreModalesAlClickAfuera();
   iniciarEstadoConexion();
   iniciarInstalacionPWA();
   registrarServiceWorker();
+  iniciarCampanaNotificaciones();
+  iniciarTema();
   iniciarAviso();
   iniciarPanelAuth();
+  iniciarTutorial();
 
   iniciarMapa();
   iniciarListaYRealtime();

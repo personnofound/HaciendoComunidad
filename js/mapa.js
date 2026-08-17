@@ -71,12 +71,25 @@ export function iniciarMapa({
     );
   }
 
+  // Delegación de clics para el botón "Ver detalles" dentro de los popups
+  // (el contenido del popup se recrea cada vez que se abre, así que un
+  // listener puesto directo en el botón se perdería — delegar en #mapa,
+  // que sí persiste, funciona siempre).
+  document.getElementById('mapa').addEventListener('click', (e) => {
+    const boton = e.target.closest('[data-accion="ver-detalles"]');
+    if (!boton) return;
+    resaltarTarjeta(boton.dataset.id, { scroll: true });
+  });
+
   setTimeout(() => mapaLeaflet.invalidateSize(), 300);
 }
+
+let marcadoresPorId = new Map();
 
 function pintarMarcadores(items) {
   if (!capaMarcadores) return;
   capaMarcadores.clearLayers();
+  marcadoresPorId = new Map();
   items.forEach((item) => {
     if (typeof item.lat !== 'number' || typeof item.lng !== 'number') return;
 
@@ -104,9 +117,41 @@ function pintarMarcadores(items) {
       ${item.localidad ? `<small>🏘️ ${escaparHTML(item.localidad)}</small><br>` : ''}
       <small>${tiempoRelativo(item._fecha)}</small>
       ${contacto && contacto.texto ? `<br><small>Contacto: ${escaparHTML(contacto.texto)}</small>` : ''}
+      <button type="button" class="popup-btn-detalles" data-accion="ver-detalles" data-id="${item.id}">👁️ Ver detalles</button>
     `);
+
+    // Al tocar el punto (no el botón del popup) ya se resalta la tarjeta
+    // correspondiente, sin mover la pantalla — útil sobre todo en la
+    // vista de 2 columnas, donde mapa y lista se ven al mismo tiempo.
+    marcador.on('click', () => resaltarTarjeta(item.id, { scroll: false }));
+
     marcador.addTo(capaMarcadores);
+    marcadoresPorId.set(item.id, marcador);
   });
+}
+
+/** Marca visualmente una tarjeta como "seleccionada" (ej. al tocar su
+ * punto en el mapa), y opcionalmente hace scroll hasta ella — pensado
+ * para cuando mapa y lista no están visibles al mismo tiempo (celular). */
+function resaltarTarjeta(id, { scroll = true } = {}) {
+  document.querySelectorAll('#lista-reportes .tarjeta.seleccionada').forEach((n) => n.classList.remove('seleccionada'));
+  const nodo = document.querySelector(`#lista-reportes [data-doc-id="${id}"]`);
+  if (!nodo) return;
+  nodo.classList.add('seleccionada');
+  if (scroll) nodo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/** Centra el mapa en un reporte puntual y abre su popup — se usa al tocar
+ * las coordenadas de una tarjeta ("📍 lat, lng"). */
+function centrarMapaEnReporte(id) {
+  const item = itemsActuales.find((it) => it.id === id);
+  if (!item || typeof item.lat !== 'number') return;
+  if (mapaLeaflet) {
+    mapaLeaflet.setView([item.lat, item.lng], 15);
+    const marcador = marcadoresPorId.get(id);
+    if (marcador) marcador.openPopup();
+  }
+  document.getElementById('mapa').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function galeriaFotosHTML(item) {
@@ -191,8 +236,12 @@ function tarjetaHTML(item) {
       ${afectacionHTML(item)}
       ${conteoAyudantesHTML(item)}
       <div class="meta">
-        ${item.localidad ? `<span>🏘️ ${escaparHTML(item.localidad)}</span>` : ''}
-        ${typeof item.lat === 'number' ? `<span>📍 ${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}</span>` : ''}
+        ${item.localidad && typeof item.lat === 'number'
+          ? `<a class="meta-clic" href="https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}" target="_blank" rel="noopener noreferrer" title="Cómo llegar en Google Maps">🏘️ ${escaparHTML(item.localidad)}</a>`
+          : item.localidad ? `<span>🏘️ ${escaparHTML(item.localidad)}</span>` : ''}
+        ${typeof item.lat === 'number'
+          ? `<button type="button" class="meta-clic" data-accion="centrar-mapa" data-id="${item.id}" title="Ver en el mapa">📍 ${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}</button>`
+          : ''}
         ${contacto && contacto.href
           ? `<a class="contacto" href="${contacto.href}" target="_blank" rel="noopener">📞 ${escaparHTML(contacto.texto)}</a>`
           : contacto && contacto.texto ? `<span>📞 ${escaparHTML(contacto.texto)}</span>` : ''}
@@ -311,6 +360,11 @@ export function iniciarListaYRealtime() {
     if (!boton) return;
     const { accion, id } = boton.dataset;
     const item = itemsActuales.find((it) => it.id === id);
+
+    if (accion === 'centrar-mapa') {
+      centrarMapaEnReporte(id);
+      return;
+    }
 
     if (accion === 'resolver') {
       boton.disabled = true;
