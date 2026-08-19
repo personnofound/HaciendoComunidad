@@ -1,7 +1,7 @@
 // js/app.js
-import { iniciarMapa, iniciarListaYRealtime, iniciarFormularioReporte, refrescarTamanoMapa } from './mapa.js';
-import { iniciarListaYRealtimeDesaparecidos, iniciarFormularioDesaparecidos } from './desaparecidos.js';
-import { iniciarListaYRealtimeComunidad, iniciarFormularioComunidad } from './comunidad.js';
+import { iniciarMapa, iniciarListaYRealtime, iniciarFormularioReporte, refrescarTamanoMapa, resaltarDesdeEnlace as resaltarReporteDesdeEnlace } from './mapa.js';
+import { iniciarListaYRealtimeDesaparecidos, iniciarFormularioDesaparecidos, resaltarDesdeEnlace as resaltarDesaparecidoDesdeEnlace } from './desaparecidos.js';
+import { iniciarListaYRealtimeComunidad, iniciarFormularioComunidad, resaltarDesdeEnlace as resaltarComunidadDesdeEnlace } from './comunidad.js';
 import { iniciarAviso } from './aviso.js';
 import { iniciarMonitorSismos } from './sismos.js';
 import { iniciarCampanaNotificaciones, publicarNotificacion, retirarNotificacion, registrarAccionNotificacion } from './notificaciones.js';
@@ -43,19 +43,45 @@ function iniciarFiltrosColapsables() {
 }
 
 // ---------- Pestañas ----------
-function iniciarTabs() {
+function cambiarAVista(idVista) {
   const botones = document.querySelectorAll('nav.tabs button');
   const vistas = document.querySelectorAll('section.vista');
+  botones.forEach((b) => b.classList.remove('active'));
+  vistas.forEach((v) => v.classList.remove('active'));
+  const boton = document.querySelector(`nav.tabs button[data-vista="${idVista}"]`);
+  const vista = document.getElementById(idVista);
+  if (boton) boton.classList.add('active');
+  if (vista) vista.classList.add('active');
+  if (idVista === 'vista-mapa') refrescarTamanoMapa();
+}
+
+function iniciarTabs() {
+  const botones = document.querySelectorAll('nav.tabs button');
   botones.forEach((btn) => {
     btn.addEventListener('click', () => {
-      botones.forEach((b) => b.classList.remove('active'));
-      vistas.forEach((v) => v.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(btn.dataset.vista).classList.add('active');
-      if (btn.dataset.vista === 'vista-mapa') refrescarTamanoMapa();
+      cambiarAVista(btn.dataset.vista);
       window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
     });
   });
+}
+
+// ---------- Enlaces directos a una publicación (#reporte-id, etc) ----------
+function manejarEnlaceDirecto() {
+  const hash = location.hash.slice(1); // quita el "#"
+  if (!hash) return;
+  const [tipo, id] = hash.split('-', 2);
+  if (!id) return;
+
+  if (tipo === 'reporte') {
+    cambiarAVista('vista-mapa');
+    setTimeout(() => resaltarReporteDesdeEnlace(id), 350);
+  } else if (tipo === 'desaparecido') {
+    cambiarAVista('vista-desaparecidos');
+    setTimeout(() => resaltarDesaparecidoDesdeEnlace(id), 350);
+  } else if (tipo === 'comunidad') {
+    cambiarAVista('vista-comunidad');
+    setTimeout(() => resaltarComunidadDesdeEnlace(id), 350);
+  }
 }
 
 // ---------- Estado de conexión ----------
@@ -194,4 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   iniciarListaYRealtimeComunidad();
   iniciarFormularioComunidad();
+
+  manejarEnlaceDirecto();
 });

@@ -10,7 +10,7 @@ import { COLECCIONES, UMBRAL_DESACTUALIZADO } from './config.js';
 import {
   escaparHTML, limpiarTexto, puedeEnviar, marcarEnviado, tiempoRelativo, linkContacto,
   esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada, olvidarMarcaDesactualizada,
-  obtenerUbicacionPorGPS
+  obtenerUbicacionPorGPS, compartirPublicacion, construirMensajeCompartir, mostrarToast
 } from './utils.js';
 import { validarFotos, subirFotos } from './fotos.js';
 import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
@@ -75,6 +75,7 @@ function tarjetaHTML(item) {
   if (!resuelto && !yaFlageada) {
     acciones.push(`<button type="button" class="btn-mini" data-accion="flagear" data-id="${item.id}">🚩 Marcar como "Ya no aplica / desactualizado"</button>`);
   }
+  acciones.push(`<button type="button" class="btn-mini" data-accion="compartir" data-id="${item.id}">🔗 Compartir</button>`);
 
   return `
     <article class="tarjeta ${resuelto ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}" data-doc-id="${item.id}" data-tipo-sujeto="${escaparHTML(item.tipoSujeto || 'persona')}">
@@ -138,6 +139,38 @@ function reemplazarTarjetaEnDOM(id) {
   nodoViejo.replaceWith(envoltorio.firstElementChild);
 }
 
+let idPendientePorResaltar = null;
+
+function resaltarTarjeta(id, { scroll = true } = {}) {
+  document.querySelectorAll('#lista-desaparecidos .tarjeta.seleccionada').forEach((n) => n.classList.remove('seleccionada'));
+  const nodo = document.querySelector(`#lista-desaparecidos [data-doc-id="${id}"]`);
+  if (!nodo) return false;
+  nodo.classList.add('seleccionada');
+  if (scroll) nodo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return true;
+}
+
+/** Se usa al abrir un enlace directo a una publicación (#desaparecido-id):
+ * resetea los filtros para garantizar que sea visible, y la resalta apenas
+ * esté disponible (de una si ya cargó, o en el próximo tiempo real). */
+export function resaltarDesdeEnlace(id) {
+  idPendientePorResaltar = id;
+  filtroModo = 'todos';
+  filtroTipoSujeto = 'todos';
+  filtroLocalidad = '';
+  mostrarResueltos = true;
+  const inputFiltro = document.getElementById('filtro-localidad-desaparecidos');
+  if (inputFiltro) inputFiltro.value = '';
+  document.querySelectorAll('#filtro-modo-desaparecidos button, #filtro-desaparecidos button').forEach((b) => b.classList.remove('active'));
+  document.querySelectorAll('#filtro-modo-desaparecidos button[data-filtro="todos"], #filtro-desaparecidos button[data-filtro="todos"]').forEach((b) => b.classList.add('active'));
+  const toggleResueltos = document.getElementById('toggle-encontrados-desaparecidos');
+  if (toggleResueltos) toggleResueltos.checked = true;
+  renderLista(itemsActuales);
+  if (resaltarTarjeta(id, { scroll: true })) {
+    idPendientePorResaltar = null;
+  }
+}
+
 export function iniciarListaYRealtimeDesaparecidos() {
   const avisoCache = document.getElementById('aviso-cache-desaparecidos');
   controlador.escucharRecientes({
@@ -145,6 +178,9 @@ export function iniciarListaYRealtimeDesaparecidos() {
       itemsActuales = items;
       renderLista(items);
       avisoCache.hidden = !deCache;
+      if (idPendientePorResaltar && resaltarTarjeta(idPendientePorResaltar, { scroll: true })) {
+        idPendientePorResaltar = null;
+      }
     },
     onError: () => {
       const vacio = document.getElementById('vacio-desaparecidos');
@@ -157,6 +193,36 @@ export function iniciarListaYRealtimeDesaparecidos() {
     const boton = e.target.closest('[data-accion]');
     if (!boton) return;
     const { accion, id } = boton.dataset;
+
+    if (accion === 'compartir') {
+      const item = itemsActuales.find((it) => it.id === id);
+      if (!item) return;
+      const esPersona = item.tipoSujeto === 'persona';
+      const esBusco = item.modo === 'busco';
+      const contacto = item.contacto ? linkContacto(item.contacto) : null;
+      const url = `${location.origin}${location.pathname}#desaparecido-${id}`;
+      const texto = construirMensajeCompartir({
+        intro: esBusco
+          ? `🔎 Se está buscando a ${esPersona ? 'una persona' : 'una mascota'}.`
+          : `✅ Encontraron a ${esPersona ? 'una persona' : 'una mascota'}.`,
+        campos: [
+          ['Nombre', item.nombre || 'Sin identificar'],
+          ['Descripción', item.descripcion],
+          ['Última ubicación conocida', item.ultimaUbicacion],
+          ['Localidad', item.localidad],
+          ['Contacto', contacto ? contacto.texto : '']
+        ],
+        fecha: item._fecha,
+        url
+      });
+      const resultado = await compartirPublicacion({
+        titulo: `${esBusco ? 'Búsqueda' : 'Hallazgo'} — Haciendo Comunidad`,
+        texto
+      });
+      if (resultado.metodo === 'portapapeles') mostrarToast('🔗 Enlace copiado');
+      else if (resultado.metodo === 'manual') mostrarToast('📋 Copia el texto del cuadro para compartirlo');
+      return;
+    }
 
     if (accion === 'resolver') {
       boton.disabled = true;

@@ -62,6 +62,77 @@ export function debounce(fn, espera = 300) {
   };
 }
 
+/** Fecha corta y legible para incluir al compartir una publicación
+ * (ej. "12 ago 2026, 3:40 p.m."). */
+export function fechaCorta(fecha) {
+  if (!fecha) return '';
+  return new Intl.DateTimeFormat('es-CO', {
+    day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit'
+  }).format(fecha);
+}
+
+/**
+ * Comparte una publicación: usa el selector nativo del teléfono
+ * (navigator.share) si está disponible, o copia el texto al portapapeles
+ * como respaldo (ej. en computador). "urlHash" arma un enlace directo a
+ * esa publicación (#coleccion-id) — si alguien lo abre, la app cambia
+ * sola a la pestaña correcta y resalta esa tarjeta.
+ */
+/**
+ * Arma un mensaje de texto largo y explicativo para compartir una
+ * publicación: una frase de introducción, una lista de campos con
+ * etiqueta (los que vengan vacíos se omiten solos), y al final la fecha
+ * de publicación y el enlace directo.
+ *
+ *   construirMensajeCompartir({
+ *     intro: 'Alguien necesita ayuda.',
+ *     campos: [['Necesita', 'Agua potable'], ['Lugar', 'San Fernando']],
+ *     fecha: new Date(...),
+ *     url: 'https://.../#comunidad-abc123'
+ *   })
+ */
+export function construirMensajeCompartir({ intro, campos, fecha, url }) {
+  const lineas = [intro];
+  (campos || []).forEach(([etiqueta, valor]) => {
+    if (valor) lineas.push(`${etiqueta}: ${valor}`);
+  });
+  lineas.push(`Fecha publicación: ${fechaCorta(fecha)}`);
+  lineas.push(`Link con todos los detalles: ${url}`);
+  return lineas.join('\n');
+}
+
+/**
+ * Comparte un texto ya armado (ver construirMensajeCompartir): usa el
+ * selector nativo del teléfono (navigator.share) si está disponible; si
+ * no, copia todo al portapapeles; y si eso tampoco se puede (ej. estás
+ * probando el sitio sin HTTPS, donde el portapapeles del navegador no
+ * funciona), muestra el texto en un cuadro para copiarlo a mano — así
+ * siempre hay una forma de compartir, sin importar el navegador.
+ */
+export async function compartirPublicacion({ titulo, texto }) {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: titulo, text: texto });
+      return { ok: true, metodo: 'compartir' };
+    } catch (err) {
+      if (err && err.name === 'AbortError') return { ok: false, metodo: 'cancelado' };
+      // Si falla el share nativo por algún motivo, seguimos con el respaldo.
+    }
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      return { ok: true, metodo: 'portapapeles' };
+    } catch (err) {
+      // Seguimos al último recurso.
+    }
+  }
+
+  window.prompt('No se pudo compartir automáticamente. Copia este texto:', texto);
+  return { ok: true, metodo: 'manual' };
+}
+
 export function generarIdDispositivo() {
   let id = localStorage.getItem('id_dispositivo');
   if (!id) {
@@ -220,3 +291,62 @@ export async function obtenerNombreLugar(lat, lng) {
   const partes = [municipio, departamento, pais].filter(Boolean);
   return partes.join(', ') || datos.display_name || 'Ubicación desconocida';
 }
+
+// --- Versión con caché + cola de obtenerNombreLugar, pensada para poder
+// resolver el lugar de VARIOS reportes (ej. al filtrar por localidad
+// usando las coordenadas de cada uno) sin golpear el servicio gratuito de
+// Nominatim más rápido de lo que su uso justo permite (~1 solicitud por
+// segundo). El resultado se guarda en localStorage por coordenada
+// redondeada, así que reportes cercanos entre sí comparten el mismo
+// resultado ya guardado y no vuelven a consultarse.
+function claveCacheGeocode(lat, lng) {
+  return `geocode_cache_${lat.toFixed(3)}_${lng.toFixed(3)}`;
+}
+
+export function leerNombreLugarCacheado(lat, lng) {
+  try {
+    return localStorage.getItem(claveCacheGeocode(lat, lng)) || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+let colaGeocode = Promise.resolve();
+
+export function obtenerNombreLugarConCola(lat, lng) {
+  const cacheado = leerNombreLugarCacheado(lat, lng);
+  if (cacheado) return Promise.resolve(cacheado);
+
+  const tarea = colaGeocode.then(async () => {
+    let nombre = '';
+    try {
+      nombre = await obtenerNombreLugar(lat, lng);
+      localStorage.setItem(claveCacheGeocode(lat, lng), nombre);
+    } catch (e) {
+      // Si falla, no se cachea — se puede reintentar en otro momento.
+    }
+    // Deja pasar un poco más de 1 segundo antes de la próxima consulta
+    // en la cola, sin importar si esta tuvo éxito o no.
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    return nombre;
+  });
+
+  colaGeocode = tarea;
+  return tarea;
+}
+
+/** Aviso flotante chiquito y temporal (ej. "Enlace copiado"), para
+ * confirmar acciones rápidas sin interrumpir con un alert(). */
+export function mostrarToast(mensaje) {
+  let toast = document.getElementById('toast-app');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast-app';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = mensaje;
+  toast.classList.add('visible');
+  clearTimeout(toast._temporizador);
+  toast._temporizador = setTimeout(() => toast.classList.remove('visible'), 2500);
+}
+

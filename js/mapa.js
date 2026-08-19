@@ -5,7 +5,8 @@ import {
   escaparHTML, limpiarTexto, puedeEnviar, marcarEnviado, tiempoRelativo, linkContacto,
   esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada, olvidarMarcaDesactualizada,
   obtenerUbicacionPorGPS, buscarDireccion,
-  estoyAyudandoAqui, marcarAyudandoAqui, quitarAyudandoAqui
+  estoyAyudandoAqui, marcarAyudandoAqui, quitarAyudandoAqui,
+  leerNombreLugarCacheado, obtenerNombreLugarConCola, compartirPublicacion, construirMensajeCompartir, mostrarToast
 } from './utils.js';
 import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
 import { validarFotos, subirFotos } from './fotos.js';
@@ -109,7 +110,7 @@ function pintarMarcadores(items) {
 
     marcador.bindPopup(`
       <strong>${escaparHTML(etiquetaPorTipo(item.tipo))}</strong>
-      ${item.verificado ? ' <span style="color:#c9960c">✅ Verificado</span>' : ''}<br>
+      ${item.verificado ? ' <span style="color:var(--badge-dorado-texto)">✅ Verificado</span>' : ''}<br>
       ${escaparHTML(item.descripcion || '')}<br>
       ${afectacionPopup.length ? `<small>${afectacionPopup.join(' · ')}</small><br>` : ''}
       ${TIPOS_CON_CONTEO_AYUDANTES.includes(item.tipo) && item.personasAyudando !== undefined
@@ -130,15 +131,41 @@ function pintarMarcadores(items) {
   });
 }
 
+let idPendientePorResaltar = null;
+
 /** Marca visualmente una tarjeta como "seleccionada" (ej. al tocar su
  * punto en el mapa), y opcionalmente hace scroll hasta ella — pensado
  * para cuando mapa y lista no están visibles al mismo tiempo (celular). */
 function resaltarTarjeta(id, { scroll = true } = {}) {
   document.querySelectorAll('#lista-reportes .tarjeta.seleccionada').forEach((n) => n.classList.remove('seleccionada'));
   const nodo = document.querySelector(`#lista-reportes [data-doc-id="${id}"]`);
-  if (!nodo) return;
+  if (!nodo) return false;
   nodo.classList.add('seleccionada');
   if (scroll) nodo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return true;
+}
+
+/** Se usa cuando alguien abre un enlace directo a un reporte (#reporte-id):
+ * si el reporte ya está cargado lo resalta de una vez; si no, lo deja
+ * "pendiente" para resaltarlo apenas llegue en el próximo tiempo real.
+ * También resetea los filtros activos, para que el reporte compartido
+ * sea visible sin importar qué filtro tenía puesto quien abre el enlace. */
+export function resaltarDesdeEnlace(id) {
+  idPendientePorResaltar = id;
+  filtroLocalidad = '';
+  filtroTipo = 'todos';
+  mostrarAtendidos = true;
+  const inputFiltro = document.getElementById('filtro-localidad-reportes');
+  if (inputFiltro) inputFiltro.value = '';
+  document.querySelectorAll('#filtro-tipo-reportes button').forEach((b) => b.classList.remove('active'));
+  const btnTodos = document.querySelector('#filtro-tipo-reportes button[data-filtro="todos"]');
+  if (btnTodos) btnTodos.classList.add('active');
+  const toggleAtendidos = document.getElementById('toggle-atendidos-reportes');
+  if (toggleAtendidos) toggleAtendidos.checked = true;
+  refiltrarTodo();
+  if (resaltarTarjeta(id, { scroll: true })) {
+    idPendientePorResaltar = null;
+  }
 }
 
 /** Centra el mapa en un reporte puntual y abre su popup — se usa al tocar
@@ -221,6 +248,7 @@ function tarjetaHTML(item) {
   if (!atendido && !yaFlageada) {
     acciones.push(`<button type="button" class="btn-mini" data-accion="flagear" data-id="${item.id}">🚩 Marcar como "Ya no aplica / desactualizado"</button>`);
   }
+  acciones.push(`<button type="button" class="btn-mini" data-accion="compartir" data-id="${item.id}">🔗 Compartir</button>`);
 
   return `
     <article class="tarjeta ${atendido ? 'esta-resuelta' : ''} ${item.verificado ? 'verificada' : ''}" data-doc-id="${item.id}">
@@ -251,9 +279,46 @@ function tarjetaHTML(item) {
     </article>`;
 }
 
+const nombreLugarPorId = new Map(); // caché en memoria: id del reporte -> lugar deducido por sus coordenadas
+
+/** Encola (si hace falta) la búsqueda del lugar por coordenadas GPS de un
+ * reporte, y cuando llega el resultado vuelve a aplicar los filtros —
+ * solo se dispara mientras haya un texto de búsqueda activo, para no
+ * gastar consultas de más cuando nadie está filtrando por localidad. */
+function encolarBusquedaDeLugar(item) {
+  if (nombreLugarPorId.has(item.id)) return; // ya resuelto o en camino
+  nombreLugarPorId.set(item.id, ''); // marca "en proceso"
+
+  const cacheado = leerNombreLugarCacheado(item.lat, item.lng);
+  if (cacheado) {
+    nombreLugarPorId.set(item.id, cacheado);
+    if (filtroLocalidad) refiltrarTodo();
+    return;
+  }
+
+  obtenerNombreLugarConCola(item.lat, item.lng).then((nombre) => {
+    nombreLugarPorId.set(item.id, nombre || '');
+    if (filtroLocalidad) refiltrarTodo();
+  });
+}
+
 function coincideLocalidad(item) {
   if (!filtroLocalidad) return true;
-  return String(item.localidad || '').toLowerCase().includes(filtroLocalidad);
+
+  const textoDirecto = String(item.localidad || '').toLowerCase();
+  if (textoDirecto.includes(filtroLocalidad)) return true;
+
+  // El texto que la persona escribió en "localidad" no calzó — probamos
+  // también con el lugar que deducimos de las coordenadas GPS del
+  // reporte (ej. alguien busca "Cali" y el reporte no dice "Cali" en el
+  // campo de texto, pero sus coordenadas sí caen dentro de Cali).
+  const nombreGPS = nombreLugarPorId.get(item.id);
+  if (nombreGPS) return nombreGPS.toLowerCase().includes(filtroLocalidad);
+
+  if (typeof item.lat === 'number' && typeof item.lng === 'number') {
+    encolarBusquedaDeLugar(item);
+  }
+  return false;
 }
 function coincideTipo(item) {
   return filtroTipo === 'todos' || item.tipo === filtroTipo;
@@ -329,6 +394,9 @@ function refiltrarTodo() {
   renderLista(itemsActuales);
   pintarMarcadores(visibles);
   renderResumenAfectacion(visibles);
+  if (idPendientePorResaltar && resaltarTarjeta(idPendientePorResaltar, { scroll: true })) {
+    idPendientePorResaltar = null;
+  }
 }
 
 function reemplazarTarjetaEnDOM(id) {
@@ -363,6 +431,26 @@ export function iniciarListaYRealtime() {
 
     if (accion === 'centrar-mapa') {
       centrarMapaEnReporte(id);
+      return;
+    }
+
+    if (accion === 'compartir') {
+      if (!item) return;
+      const contacto = item.contacto ? linkContacto(item.contacto) : null;
+      const url = `${location.origin}${location.pathname}#reporte-${id}`;
+      const texto = construirMensajeCompartir({
+        intro: `🆘 Reporte de ayuda: ${etiquetaPorTipo(item.tipo)}.`,
+        campos: [
+          ['Descripción', item.descripcion],
+          ['Localidad', item.localidad],
+          ['Contacto', contacto ? contacto.texto : '']
+        ],
+        fecha: item._fecha,
+        url
+      });
+      const resultado = await compartirPublicacion({ titulo: `${etiquetaPorTipo(item.tipo)} — Haciendo Comunidad`, texto });
+      if (resultado.metodo === 'portapapeles') mostrarToast('🔗 Enlace copiado');
+      else if (resultado.metodo === 'manual') mostrarToast('📋 Copia el texto del cuadro para compartirlo');
       return;
     }
 

@@ -6,7 +6,7 @@ import {
   escaparHTML, limpiarTexto, puedeEnviar, marcarEnviado, tiempoRelativo, linkContacto,
   esPublicacionPropia, recordarPublicacionPropia, yaMarcadaComoDesactualizada, recordarMarcaDesactualizada, olvidarMarcaDesactualizada,
   yaReclamoEsto, recordarReclamo, olvidarReclamo, yaConfirmoEntrega, recordarConfirmacionEntrega, olvidarConfirmacionEntrega,
-  obtenerUbicacionPorGPS
+  obtenerUbicacionPorGPS, compartirPublicacion, construirMensajeCompartir, mostrarToast
 } from './utils.js';
 import { usuarioEsCuentaInstitucional, obtenerUsuarioActual } from './auth.js';
 import { validarFotos, subirFotos } from './fotos.js';
@@ -123,6 +123,7 @@ function accionesHTML(item) {
   if (!yaFlageada) {
     acciones.push(`<button type="button" class="btn-mini" data-accion="flagear" data-id="${item.id}">🚩 Ya no aplica / desactualizado</button>`);
   }
+  acciones.push(`<button type="button" class="btn-mini" data-accion="compartir" data-id="${item.id}">🔗 Compartir</button>`);
 
   return acciones.length ? `<div class="acciones-tarjeta">${acciones.join('')}</div>` : '';
 }
@@ -156,7 +157,7 @@ function tarjetaHTML(item) {
           ? `<a class="contacto" href="${contacto.href}" target="_blank" rel="noopener">📞 ${escaparHTML(contacto.texto)}</a>`
           : contacto && contacto.texto ? `<span>📞 ${escaparHTML(contacto.texto)}</span>` : ''}
       </div>
-      ${yoReclame && yoConfirme ? '<p class="nota-flageada" style="color:#9fe0ba">Ya confirmaste tu parte, ¡gracias por ayudar!</p>' : ''}
+      ${yoReclame && yoConfirme ? '<p class="nota-flageada" style="color:var(--badge-verde-texto)">Ya confirmaste tu parte, ¡gracias por ayudar!</p>' : ''}
       ${accionesHTML(item)}
     </article>`;
 }
@@ -197,6 +198,41 @@ function reemplazarTarjetaEnDOM(id) {
   nodoViejo.replaceWith(envoltorio.firstElementChild);
 }
 
+let idPendientePorResaltar = null;
+
+function resaltarTarjeta(id, { scroll = true } = {}) {
+  document.querySelectorAll('#lista-comunidad .tarjeta.seleccionada').forEach((n) => n.classList.remove('seleccionada'));
+  const nodo = document.querySelector(`#lista-comunidad [data-doc-id="${id}"]`);
+  if (!nodo) return false;
+  nodo.classList.add('seleccionada');
+  if (scroll) nodo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return true;
+}
+
+/** Se usa al abrir un enlace directo a una publicación (#comunidad-id):
+ * resetea los filtros para garantizar que sea visible, y la resalta apenas
+ * esté disponible (de una si ya cargó, o en el próximo tiempo real). */
+export function resaltarDesdeEnlace(id) {
+  idPendientePorResaltar = id;
+  filtroTipoPublicacion = 'todos';
+  filtroCategoria = 'todas';
+  filtroZona = '';
+  mostrarResueltas = true;
+  const inputZona = document.getElementById('filtro-zona-comunidad');
+  if (inputZona) inputZona.value = '';
+  const selectCategoria = document.getElementById('filtro-categoria-comunidad');
+  if (selectCategoria) selectCategoria.value = 'todas';
+  document.querySelectorAll('#filtro-tipo-comunidad button').forEach((b) => b.classList.remove('active'));
+  const btnTodos = document.querySelector('#filtro-tipo-comunidad button[data-filtro="todos"]');
+  if (btnTodos) btnTodos.classList.add('active');
+  const toggleResueltas = document.getElementById('toggle-cubiertos-comunidad');
+  if (toggleResueltas) toggleResueltas.checked = true;
+  renderLista(itemsActuales);
+  if (resaltarTarjeta(id, { scroll: true })) {
+    idPendientePorResaltar = null;
+  }
+}
+
 export function iniciarListaYRealtimeComunidad() {
   const avisoCache = document.getElementById('aviso-cache-comunidad');
   controlador.escucharRecientes({
@@ -204,6 +240,9 @@ export function iniciarListaYRealtimeComunidad() {
       itemsActuales = items;
       renderLista(items);
       avisoCache.hidden = !deCache;
+      if (idPendientePorResaltar && resaltarTarjeta(idPendientePorResaltar, { scroll: true })) {
+        idPendientePorResaltar = null;
+      }
     },
     onError: () => {
       const vacio = document.getElementById('vacio-comunidad');
@@ -217,6 +256,35 @@ export function iniciarListaYRealtimeComunidad() {
     if (!boton) return;
     const { accion, id } = boton.dataset;
     const item = itemsActuales.find((it) => it.id === id);
+
+    if (accion === 'compartir') {
+      if (!item) return;
+      const esPeticion = item.tipoPublicacion === 'peticion';
+      const contacto = item.contacto ? linkContacto(item.contacto) : null;
+      const detalleItems = Array.isArray(item.items) && item.items.length
+        ? item.items.map((it) => `${it.texto}${it.cantidad > 0 ? ` (${it.cantidad})` : ''}`).join(', ')
+        : '';
+      const url = `${location.origin}${location.pathname}#comunidad-${id}`;
+      const texto = construirMensajeCompartir({
+        intro: esPeticion ? '🚨 Alguien necesita ayuda.' : '🙏 Alguien puede ofrecer ayuda.',
+        campos: [
+          [esPeticion ? 'Necesita' : 'Ofrece', item.servicio],
+          ['Detalle', item.descripcion],
+          ['Incluye', detalleItems],
+          ['Lugar', item.zona],
+          ['Contacto', contacto ? contacto.texto : '']
+        ],
+        fecha: item._fecha,
+        url
+      });
+      const resultado = await compartirPublicacion({
+        titulo: `${esPeticion ? 'Necesitan ayuda' : 'Ofrecen ayuda'} — Haciendo Comunidad`,
+        texto
+      });
+      if (resultado.metodo === 'portapapeles') mostrarToast('🔗 Enlace copiado');
+      else if (resultado.metodo === 'manual') mostrarToast('📋 Copia el texto del cuadro para compartirlo');
+      return;
+    }
 
     if (accion === 'cancelar' || accion === 'confirmar-atendida') {
       boton.disabled = true;

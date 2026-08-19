@@ -12,6 +12,26 @@
   --warn: #d9a441;
   --radius: 10px;
   --focus: #ffd166;
+
+  /* Insignias/etiquetas: fondo suave + texto de buen contraste. En oscuro
+     el texto es claro (funciona sobre paneles oscuros); en modo claro
+     estos mismos nombres se redefinen más abajo con texto oscuro, para
+     que nunca queden "lavados" sobre un fondo blanco. */
+  --badge-rojo-bg: rgba(192,57,43,.2);
+  --badge-rojo-texto: #f3a79c;
+  --badge-verde-bg: rgba(46,139,87,.2);
+  --badge-verde-texto: #9fe0ba;
+  --badge-azul-bg: rgba(59,130,196,.2);
+  --badge-azul-texto: #a9d3f2;
+  --badge-amarillo-bg: rgba(217,164,65,.2);
+  --badge-amarillo-texto: #f0d18c;
+  --badge-morado-bg: rgba(155,89,182,.22);
+  --badge-morado-texto: #d3a9f0;
+  --badge-dorado-bg: rgba(245,197,24,.18);
+  --badge-dorado-texto: #f5c518;
+
+  --texto-error: #f3897d;
+  --texto-exito: #8fd6a8;
 }
 
 /* Modo claro (opcional, oscuro sigue siendo el de por defecto) */
@@ -28,6 +48,24 @@ body.tema-claro{
   --info: #2b6ca3;
   --warn: #a9721a;
   --focus: #b8860b;
+
+  /* Mismas insignias, pero con fondo más marcado y texto oscuro del
+     mismo tono — así siempre hay buen contraste sobre fondo blanco. */
+  --badge-rojo-bg: #f9d9d4;
+  --badge-rojo-texto: #8a231a;
+  --badge-verde-bg: #d3ecdd;
+  --badge-verde-texto: #14522f;
+  --badge-azul-bg: #d5e6f4;
+  --badge-azul-texto: #163e5c;
+  --badge-amarillo-bg: #f3e2c2;
+  --badge-amarillo-texto: #614109;
+  --badge-morado-bg: #e7d9f5;
+  --badge-morado-texto: #4a1f7a;
+  --badge-dorado-bg: #f5e6ae;
+  --badge-dorado-texto: #6b4e00;
+
+  --texto-error: #b3261e;
+  --texto-exito: #1a5c39;
 }
 body.tema-claro .leaflet-popup-content-wrapper{background:#fff; color:#1a2430}
 body.tema-claro .leaflet-popup-tip{background:#fff}
@@ -101,7 +139,7 @@ header.top h1 small{display:block; font-weight:400; font-size:11px; color:var(--
 .sesion-admin[hidden]{display:none}
 #sesion-email-corto{
   max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#a9d3f2;
+  color:var(--badge-azul-texto);
 }
 #btn-logout-admin{
   background:none; border:none; color:var(--text-dim); cursor:pointer;
@@ -335,7 +373,7 @@ form.form-card{
 form.form-card .fila{margin-bottom:12px}
 form.form-card label{display:block; font-size:13px; font-weight:600; margin-bottom:6px}
 form.form-card .ayuda-campo{font-size:11.5px; color:var(--text-dim); margin-top:4px}
-form.form-card .ayuda-campo.error{color:#f3897d}
+form.form-card .ayuda-campo.error{color:var(--texto-error)}
 form.form-card input[type=text],
 form.form-card input[type=tel],
 form.form-card input[type=number],
@@ -357,8 +395,8 @@ form.form-card textarea{resize:vertical; min-height:70px}
 }
 
 .afectacion-tarjeta{
-  font-size:12.5px; font-weight:600; color:#f3a79c;
-  background:rgba(192,57,43,.12); border:1px solid rgba(192,57,43,.35);
+  font-size:12.5px; font-weight:600; color:var(--badge-rojo-texto);
+  background:var(--badge-rojo-bg); border:1px solid rgba(192,57,43,.35);
   border-radius:8px; padding:6px 10px; margin:6px 0;
   display:inline-block;
 }
@@ -373,8 +411,8 @@ form.form-card textarea{resize:vertical; min-height:70px}
   display:flex; gap:10px; flex-wrap:wrap; margin-bottom:6px;
 }
 .resumen-afectacion-numeros span{
-  font-size:13px; font-weight:700; color:#f3a79c;
-  background:rgba(192,57,43,.15); border-radius:8px; padding:6px 10px;
+  font-size:13px; font-weight:700; color:var(--badge-rojo-texto);
+  background:var(--badge-rojo-bg); border-radius:8px; padding:6px 10px;
 }
 .resumen-afectacion-nota{font-size:11px; color:var(--text-dim); margin:0}
 form.form-card .chips{display:flex; flex-wrap:wrap; gap:8px}
@@ -393,8 +431,8 @@ form.form-card .chip[aria-pressed="true"]{
 .btn-primario:disabled{background:#5a4038; cursor:not-allowed}
 .btn-secundario{background:var(--panel-2); color:var(--text); border:1px solid var(--line)}
 .msg-form{font-size:12.5px; margin-top:8px; min-height:16px}
-.msg-form.error{color:#f3897d}
-.msg-form.ok{color:#8fd6a8}
+.msg-form.error{color:var(--texto-error)}
+.msg-form.ok{color:var(--texto-exito)}
 
 /* Botón grande "➕ Agregar ayuda" (Mapa y Comunidad) */
 .btn-grande{
@@ -404,7 +442,7 @@ form.form-card .chip[aria-pressed="true"]{
 
 /* Botón chico tipo chip para publicar (Desaparecidos) */
 .chip-agregar{
-  border:1px solid var(--urgent); background:rgba(192,57,43,.12); color:#f3a79c;
+  border:1px solid var(--urgent); background:var(--badge-rojo-bg); color:var(--badge-rojo-texto);
   padding:9px 16px; border-radius:999px; cursor:pointer; font-size:14px; font-weight:700;
   margin-bottom:16px;
 }
@@ -470,18 +508,18 @@ form.form-card .chip[aria-pressed="true"]{
 .tarjeta .etiqueta{
   font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap;
 }
-.tarjeta .etiqueta.urgente{background:rgba(192,57,43,.2); color:#f3a79c}
-.tarjeta .etiqueta.info{background:rgba(59,130,196,.2); color:#a9d3f2}
-.tarjeta .etiqueta.resuelto{background:rgba(46,139,87,.2); color:#9fe0ba}
-.tarjeta .etiqueta.peticion{background:rgba(192,57,43,.2); color:#f3a79c}
-.tarjeta .etiqueta.oferta{background:rgba(46,139,87,.2); color:#9fe0ba}
-.tarjeta .etiqueta.alerta{background:rgba(217,164,65,.2); color:#f0d18c}
-.tarjeta .etiqueta.verificado{background:rgba(245,197,24,.18); color:#f5c518; border:1px solid #f5c518; font-weight:700}
+.tarjeta .etiqueta.urgente{background:var(--badge-rojo-bg); color:var(--badge-rojo-texto)}
+.tarjeta .etiqueta.info{background:var(--badge-azul-bg); color:var(--badge-azul-texto)}
+.tarjeta .etiqueta.resuelto{background:var(--badge-verde-bg); color:var(--badge-verde-texto)}
+.tarjeta .etiqueta.peticion{background:var(--badge-rojo-bg); color:var(--badge-rojo-texto)}
+.tarjeta .etiqueta.oferta{background:var(--badge-verde-bg); color:var(--badge-verde-texto)}
+.tarjeta .etiqueta.alerta{background:var(--badge-amarillo-bg); color:var(--badge-amarillo-texto)}
+.tarjeta .etiqueta.verificado{background:var(--badge-dorado-bg); color:var(--badge-dorado-texto); border:1px solid var(--badge-dorado-texto); font-weight:700}
 
-.tarjeta .etiqueta.disponible{background:rgba(46,139,87,.2); color:#9fe0ba}
-.tarjeta .etiqueta.en-atencion{background:rgba(217,164,65,.22); color:#f0d18c; border:1px solid rgba(217,164,65,.5)}
-.tarjeta .etiqueta.alta-demanda{background:rgba(155,89,182,.22); color:#d3a9f0; border:1px solid rgba(155,89,182,.5)}
-.tarjeta .etiqueta.atendida{background:rgba(46,139,87,.22); color:#9fe0ba; border:1px solid rgba(46,139,87,.5)}
+.tarjeta .etiqueta.disponible{background:var(--badge-verde-bg); color:var(--badge-verde-texto)}
+.tarjeta .etiqueta.en-atencion{background:var(--badge-amarillo-bg); color:var(--badge-amarillo-texto); border:1px solid var(--badge-amarillo-texto)}
+.tarjeta .etiqueta.alta-demanda{background:var(--badge-morado-bg); color:var(--badge-morado-texto); border:1px solid var(--badge-morado-texto)}
+.tarjeta .etiqueta.atendida{background:var(--badge-verde-bg); color:var(--badge-verde-texto); border:1px solid var(--badge-verde-texto)}
 .tarjeta .etiqueta.cancelada{background:rgba(122,138,153,.2); color:var(--text-dim); border:1px solid var(--line)}
 .tarjeta .etiqueta.legado{background:rgba(122,138,153,.15); color:var(--text-dim); border:1px dashed var(--line)}
 .tarjeta .etiqueta-categoria{
@@ -490,7 +528,7 @@ form.form-card .chip[aria-pressed="true"]{
 }
 .tarjeta.esta-resuelta{opacity:.65}
 .tarjeta.verificada{
-  border-color:#f5c518;
+  border-color:var(--badge-dorado-texto);
   box-shadow:0 0 0 1px rgba(245,197,24,.35);
 }
 .tarjeta.seleccionada{
@@ -528,8 +566,8 @@ form.form-card .chip[aria-pressed="true"]{
   border:1px solid var(--line); background:var(--panel-2); color:var(--text);
   text-decoration:none; display:inline-block;
 }
-.tarjeta .btn-mini.resolver{border-color:var(--safe); color:#9fe0ba}
-.tarjeta .btn-mini.direccion{border-color:var(--info); color:#a9d3f2}
+.tarjeta .btn-mini.resolver{border-color:var(--safe); color:var(--badge-verde-texto)}
+.tarjeta .btn-mini.direccion{border-color:var(--info); color:var(--badge-azul-texto)}
 .tarjeta .btn-mini:disabled{opacity:.6; cursor:default}
 .tarjeta .nota-flageada{font-size:11.5px; color:var(--warn); margin-top:4px}
 
@@ -539,11 +577,11 @@ form.form-card .chip[aria-pressed="true"]{
 }
 .toggle-mostrar-todo input{width:16px; height:16px}
 .toggle-mostrar-todo.toggle-verificados{
-  color:#f5c518; font-weight:600;
-  background:rgba(245,197,24,.08); border:1px solid rgba(245,197,24,.35);
+  color:var(--badge-dorado-texto); font-weight:600;
+  background:var(--badge-dorado-bg); border:1px solid rgba(245,197,24,.35);
   border-radius:8px; padding:8px 10px;
 }
-.toggle-mostrar-todo.toggle-verificados input{accent-color:#f5c518}
+.toggle-mostrar-todo.toggle-verificados input{accent-color:var(--badge-dorado-texto)}
 
 /* Select con el mismo estilo oscuro que el resto de los formularios */
 select.select-oscuro{
@@ -613,9 +651,9 @@ form.form-card .fila-item-comunidad input.item-cantidad{width:88px; flex:0 0 88p
   font-size:11.5px; padding:5px 10px; border-radius:999px; cursor:pointer;
   border:1px solid var(--line); background:var(--bg); color:var(--text-dim);
 }
-.chip-mini.activo.necesita-personas{background:rgba(192,57,43,.25); border-color:var(--urgent); color:#f3a79c}
-.chip-mini.activo.necesita-insumos{background:rgba(217,164,65,.25); border-color:var(--warn); color:#f0d18c}
-.chip-mini.activo.lleno{background:rgba(46,139,87,.25); border-color:var(--safe); color:#9fe0ba}
+.chip-mini.activo.necesita-personas{background:var(--badge-rojo-bg); border-color:var(--urgent); color:var(--badge-rojo-texto)}
+.chip-mini.activo.necesita-insumos{background:var(--badge-amarillo-bg); border-color:var(--warn); color:var(--badge-amarillo-texto)}
+.chip-mini.activo.lleno{background:rgba(46,139,87,.25); border-color:var(--safe); color:var(--badge-verde-texto)}
 
 /* Input de archivo (foto) */
 form.form-card input[type=file]{
@@ -674,6 +712,17 @@ form.form-card input[type=file]{
 
 .leaflet-popup-content-wrapper{background:var(--panel); color:var(--text)}
 .leaflet-popup-tip{background:var(--panel)}
+
+/* Aviso flotante temporal (ej. "Enlace copiado") */
+#toast-app{
+  position:fixed; left:50%; bottom:24px; transform:translate(-50%, 20px);
+  background:var(--panel-2); color:var(--text); border:1px solid var(--line);
+  padding:10px 18px; border-radius:999px; font-size:13px; font-weight:600;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+  opacity:0; pointer-events:none; z-index:9000;
+  transition:opacity .2s, transform .2s;
+}
+#toast-app.visible{opacity:1; transform:translate(-50%, 0)}
 
 footer.pie{
   text-align:center; color:var(--text-dim); font-size:11.5px; padding:20px 14px 90px;
